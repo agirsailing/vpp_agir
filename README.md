@@ -1,2 +1,2 @@
 # Velocity Prediction Program (VPP)
-A velocity prediction program (VPP) for the moth to analyse it's performance.
+A velocity prediction program (VPP) for the moth to analyse its performance.
