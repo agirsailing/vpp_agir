@@ -1,0 +1,31 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+
+# --- Secrets ---
+.env
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- VPP outputs (regenerable, never commit) ---
+results/
+output/
+figures/
+plots/
+*.log
+*.mat
+*.h5
+*.npy
+*.npz
