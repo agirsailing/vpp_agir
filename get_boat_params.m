@@ -1,18 +1,17 @@
 function moth = get_boat_params()
-% Frame: origin = top of rudder, x forward, z positive DOWN, hull at z = 0.
+% origin = stern of hull on deck, x forward, z positive DOWN, deck at z = 0
 
     %%  General 
     moth.name        = 'Gungnir';
     
     %%  Mass & crew 
     moth.m_boat      = 50;          % [kg] boat mass
-    moth.m_crew      = 75;          % [kg] sailor
+    moth.m_sailor    = 75;          % [kg] sailor
     moth.x_boat_cg   = 1.770;       % [m] boat CG from origin
     moth.x_crew      = 1.500;       % [m] sailor position (fixed LCG)
     moth.y_wing_edge = 1.125;       % [m] wing edge from centreline
-    moth.y_hike      = 0.300;       % [m] extra outboard CE from hiking
    
-    %%  Hull (Delft series inputs)
+    %%  Hull 
     moth.L_wl        = 3.325;       % [m] waterline length (LOA used until measured)
     moth.B_wl        = NaN;         % [m] waterline beam 
     moth.T_hull      = NaN;         % [m] canoe body draught at full displacement
@@ -26,7 +25,7 @@ function moth = get_boat_params()
     moth.mv_profile  = 'NACA0012';
     moth.mv_span     = 1.000;       % [m] hull bottom to main foil 
     moth.mv_chord    = NaN;         % [m] mean chord
-    moth.mv_tc       = 0.12;        % [-]
+    moth.mv_tc       = 0.12;        % [-] thickness ratio
     
     %%  Main horizontal foil
     moth.f1_profile  = 'NACA2412';
@@ -61,7 +60,7 @@ function moth = get_boat_params()
     %%  Ride height 
     moth.depth_foil_flying = 0.18;  % [m] main foil depth when foiling
     
-    %%  Rig / sail 
+    %%  Rig/sail 
     moth.S_sail      = 8.25;        % [m^2] Mach2 sail
     moth.b_sail      = NaN;         % [m] sail span (AR = b^2/S)
     moth.z_CE_sail   = -1.690;      % [m] sail CE, negative = above hull
@@ -74,9 +73,9 @@ function moth = get_boat_params()
     moth.windage.CD    = [NaN NaN NaN NaN NaN];                     % [-]
     
     %%  Derived 
-    moth.m_total     = moth.m_boat + moth.m_crew;                   % [kg]
+    moth.m_total     = moth.m_boat + moth.m_sailor;                 % [kg]
     moth.x_cg        = (moth.m_boat*moth.x_boat_cg + ...
-        moth.m_crew*moth.x_crew)/moth.m_total;                      % [m]
+        moth.m_sailor*moth.x_crew)/moth.m_total;                    % [m]
     moth.x_RM        = moth.y_wing_edge + moth.y_hike;              % [m] righting arm (eq. 2)
     moth.x1          = moth.f1_x - moth.x_cg;                       % [m] CG -> foil 1 CE (eq. 17)
     moth.x2          = moth.x_cg - moth.f2_x;                       % [m] CG -> foil 2 CE
