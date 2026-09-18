@@ -5,15 +5,20 @@ function moth = get_boat_params()
     moth.name        = 'Gungnir';
     
     %%  Mass & crew 
-    moth.m_boat      = 50;          % [kg] boat mass
+    moth.m_boat      = 55;          % [kg] boat mass
     moth.m_sailor    = 75;          % [kg] sailor
+    moth.m_tot       = moth.m_boat+moth.m_sailor;
+
+
     moth.x_boat_cg   = 1.770;       % [m] boat CG from origin
     moth.x_crew      = 1.500;       % [m] sailor position (fixed LCG)
     moth.y_wing_edge = 1.125;       % [m] wing edge from centreline
+
+
    
     %%  Hull 
     moth.L_wl        = 3.325;       % [m] waterline length (LOA used until measured)
-    moth.B_wl        = NaN;         % [m] waterline beam 
+    moth.B_wl        = 0.6;         % [m] waterline beam 
     moth.T_hull      = NaN;         % [m] canoe body draught at full displacement
     moth.A_wp        = NaN;         % [m^2] waterplane area
     moth.S_wet_hull  = NaN;         % [m^2] wetted surface at full displacement
@@ -38,7 +43,12 @@ function moth = get_boat_params()
     moth.f1_aoa_min  = -3;          % [deg] 
     moth.f1_aoa_max  = 6;           % [deg]
     moth.f1_CLmax    = NaN;         % [-] from polar at aoa_max
+    moth.f1_S        = moth.f1_span*(moth.f1_c_root + moth.f1_c_tip); % [m^2] !!!!This might not be true!!
+
     
+    %% Foil Lift and Drag data
+    moth.r_foildata = readtable("DATA_NACA2008.csv");
+
     %%  Rudder vertical 
     moth.rv_profile  = 'NACA0012';
     moth.rv_span     = 1.100;       % [m] hull level to rudder foil
@@ -49,7 +59,7 @@ function moth = get_boat_params()
     moth.f2_profile  = 'NACA0008';
     moth.f2_x        = 0.000;       % [m] CE
     moth.f2_span     = 0.600;       % [m]
-    moth.f2_c_root   = NaN;         % [m]
+    moth.f2_c_root   = 0.120;         % [m]
     moth.f2_c_tip    = NaN;         % [m]
     moth.f2_S        = NaN;         % [m^2]
     moth.f2_tc       = 0.08;        % [-]
@@ -75,8 +85,8 @@ function moth = get_boat_params()
     %%  Derived 
     moth.m_total     = moth.m_boat + moth.m_sailor;                 % [kg]
     moth.x_cg        = (moth.m_boat*moth.x_boat_cg + ...
-        moth.m_sailor*moth.x_crew)/moth.m_total;                    % [m]
-    moth.x_RM        = moth.y_wing_edge + moth.y_hike;              % [m] righting arm (eq. 2)
+    moth.m_sailor*moth.x_crew)/moth.m_total;                    % [m]
+    %moth.x_RM        = moth.y_wing_edge + moth.y_hike;              % [m] righting arm (eq. 2)
     moth.x1          = moth.f1_x - moth.x_cg;                       % [m] CG -> foil 1 CE (eq. 17)
     moth.x2          = moth.x_cg - moth.f2_x;                       % [m] CG -> foil 2 CE
     moth.f1_AR       = moth.f1_span^2/moth.f1_S;                    % [-] (8.66)
