@@ -77,10 +77,18 @@ function moth = get_boat_params()
     moth.CLmax_sail  = 1.5;         % [-] 
     moth.k_sail      = 1.05;        % [-] sail form factor (1+k)
     
+    %% Wings
+    moth.numberOfWingbars = 2;       % [-]  
+    moth.wingbarSpan_m    = 2.18712; % [m] from the CAD
+    moth.wingbarDepth_m   = 0.050;   % [m] from the CAD
+
+    moth.S_wings_m2 = moth.numberOfWingbars * moth.wingbarSpan_m * moth.wingbarDepth_m;
+
     %%  Windage 
     moth.windage.names = {'hull','wings','crew','rig','gantry'};
-    moth.windage.S     = [NaN NaN NaN NaN NaN];                     % [m^2]
-    moth.windage.CD    = [NaN NaN NaN NaN NaN];                     % [-]
+    moth.windage.S     = [NaN moth.S_wings_m2 NaN NaN NaN];                     % [m^2]
+    moth.windage.CD    = [NaN 1.20 NaN NaN NaN];                     % [-]
+
     
     %%  Derived 
     moth.m_total     = moth.m_boat + moth.m_sailor;                 % [kg]
