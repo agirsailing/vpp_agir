@@ -40,11 +40,18 @@ function [Fbody_N, out] = wings(VairRelBoat_body_mps, moth, env)
 
     flowDirection(:, moving) = VairRelBoat_body_mps(:, moving) ./ speed_mps(moving);
 
-    % Dynamic pressure.
+   % Dynamic pressure
     q_Pa = 0.5 .* env.air.rho .* speed_mps.^2;
 
-    % Wing drag magnitude.
-    drag_N = q_Pa .* CD .* S;
+    % Wingbars run along the y-axis.
+    % Only airflow perpendicular to the bars produces cross-flow drag.
+    crossFlowFactor = sqrt( flowDirection(1,:).^2 + flowDirection(3,:).^2);
+
+    % Direction-dependent projected wingbar area
+    projectedArea_m2 = S .* crossFlowFactor;
+
+    % Wing drag
+    drag_N = q_Pa .* CD .* projectedArea_m2;
 
     % Aerodynamic force vector.
     Fbody_N = flowDirection .* drag_N;
