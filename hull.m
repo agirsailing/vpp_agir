@@ -6,7 +6,7 @@ moth = get_boat_params(); % boat parameters
 % Boat parameters
 boat.hull.LWL   = moth.L_wl;      % waterline length [m]
 boat.hull.Swet  = 1;      % wetted surface area [m^2]
-boat.hull.disp  = 30;      % displacement [kg] - intial estimate
+boat.hull.disp  = 130;      % displacement [kg] - intial estimate
 
 
 
