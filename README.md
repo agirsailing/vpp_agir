@@ -2,6 +2,10 @@
 
 A velocity prediction program (VPP) to analyse the performance of the Moth.
 
+The [hull hydrostatics guide](HYDROSTATICS.md) covers explicit `.bri` import,
+upright and inclined hydrostatics, equilibrium draft, and free-floating attitude.
+It includes an independently validated box example and MATLAB unit tests.
+
 ## Contributing
 
 This guide explains how members of the Ägir sailing team can contribute to the VPP. Work on a separate branch for each feature or fix, then open a pull request so the team can review your changes.
