@@ -1,0 +1,6 @@
+kayak_edit_v1.bri, station x = 1.4:
+Header count 93 -> 92. Reordered the tail so the hull continues from
+0.145816 0.294164 out to 0.134597 0.305464, then the deck returns to the
+centreline at 0.000000 0.297381. Dropped the duplicate 0.000000 0.297576.
+Stations at x = 1.6, 1.8, 2.0, and 2.2 are unchanged and still weave hull
+and deck points together.
