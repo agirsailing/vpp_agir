@@ -73,7 +73,7 @@ function moth = get_boat_params()
     %%  Rig/sail 
     moth.S_sail      = 8.25;        % [m^2] Mach2 sail
     moth.b_sail      = NaN;         % [m] sail span (AR = b^2/S)
-    moth.z_CE_sail   = -1.690;      % [m] sail CE, negative = above hull
+    moth.z_CE_sail   = -2.317;      % [m] sail CE, negative = above hull
     moth.CLmax_sail  = 1.5;         % [-] 
     moth.k_sail      = 1.05;        % [-] sail form factor (1+k)
     
@@ -102,5 +102,7 @@ function moth = get_boat_params()
     moth.f2_AR       = moth.f2_span^2/moth.f2_S;                    % [-]
     moth.f2_c_mean   = moth.f2_S/moth.f2_span;                      % [m]
     moth.h_fly       = moth.mv_span - moth.depth_foil_flying;       % [m] hull clearance when foiling
+
+    
 
 end
