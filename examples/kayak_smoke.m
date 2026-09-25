@@ -1,7 +1,7 @@
 % PROVISIONAL geometry smoke check, not verified kayak hydrostatics.
 % Assumptions: metres, second header value=x, source z upward, symmetric half hull.
-% 'seal' bridges open half-section endpoints with straight transverse edges and
-% removes zero-area centreline tails. Original coordinates remain in sourcePoints.
+% 'seal' bridges open endpoints, drops interior centreline visits, and orders a
+% hull/deck weave as one chain. Original coordinates remain in sourcePoints.
 options=struct('lengthScale',1,'xHeaderColumn',2,'axisSigns',[1 1 -1], ...
     'originOffset',[0 0 0],'halfHull',true,'halfHullClosure','seal');
 root=fileparts(fileparts(mfilename('fullpath')));

@@ -106,16 +106,15 @@ flags. Descending stations are reversed; unordered or repeated stations are erro
 Half-sections must stay on one side of y=0. Default `halfHullClosure='strict'`
 requires both endpoints on y=0. Explicit `halfHullClosure='seal'` permits open
 endpoints, connecting each to its mirrored partner by a straight transverse edge,
-and removes zero-area centreline tails. This creates a sealed approximation,
-including an artificial deck over any cockpit opening; it is not downflooding
-geometry. Original pairs remain in `sections(k).sourcePoints`, with changes
-flagged by `closureAdjusted`. The supplied kayak has open endpoints and also
-returns internally to the centreline at station 1.4 before extending outward
-again. Under these provisional settings, even sealed import correctly rejects
-that station as an intersecting/touching contour (edges 75 and 108). Run
-`run('examples/kayak_smoke.m')` to reproduce the diagnostic. No physical kayak
-hydrostatics are validated; corrected sections or confirmed export semantics
-are needed. Half-sections are mirrored before coordinate conversion.
+and removes zero-area centreline tails. When a half-section jumps back to the
+centreline and then interleaves the sheer with the deck, `'seal'` orders it as
+one chain: hull out to the sheer, then the deck back to y=0. Interior centreline
+visits on an otherwise simple section are dropped. This creates a sealed
+approximation, including an artificial deck over any cockpit opening; it is not
+downflooding geometry. Original pairs remain in `sections(k).sourcePoints`, with
+changes flagged by `closureAdjusted`. The supplied kayak needs this reorder at
+stations 1.4, 1.6, 1.8, 2.0, and 2.2. No physical kayak hydrostatics are
+validated. Half-sections are mirrored before coordinate conversion.
 Consecutive duplicate points are removed;
 self-intersecting or zero-area contours are rejected. Fully closed nondegenerate
 sections are required: point/line tips must first be represented by suitable

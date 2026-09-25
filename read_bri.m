@@ -50,10 +50,11 @@ while pos<=numel(lines)
             while size(p,1)>2 && all(p(1:2,1)==0)
                 adjusted=adjusted || norm(p(1,:)-p(2,:))>t; p(1,:)=[];
             end
+            [p,reordered]=separate_hull_deck(p);
             while size(p,1)>2 && all(p(end-1:end,1)==0)
                 adjusted=adjusted || norm(p(end,:)-p(end-1,:))>t; p(end,:)=[];
             end
-            adjusted=adjusted || offCentre;
+            adjusted=adjusted || offCentre || reordered;
         end
         p=[p;[-p(end:-1:1,1) p(end:-1:1,2)]];
     end
@@ -71,6 +72,60 @@ elseif any(diff(x)<=0), error('hull:BRI','Stations must be strictly monotonic.')
 [hull.vertices,hull.faces,hull.sections]=hgeom.section_mesh(sections);
 hull.units='m'; hull.axes='x forward, y starboard, z down';
 hull.source=struct('filename',char(filename),'header',fileHeader,'options',options);
+end
+
+function [p,reordered]=separate_hull_deck(p)
+% Order a sealed half-section as hull out to the sheer, then deck back to y=0.
+reordered=false;
+if size(p,1)<4, return; end
+step=vecnorm(diff(p),2,2);
+med=median(step); if med==0, med=1e-12; end
+thr=5*med; cut=0; ymax=0;
+for i=1:numel(step)
+    ymax=max(ymax,p(i,1));
+    if step(i)>thr && p(i+1,1)<0.25*max(ymax,1e-12), cut=i; break; end
+end
+if cut==0
+    drop=p(:,1)==0; drop([1 end])=false;
+    if any(drop), p=p(~drop,:); reordered=true; end
+    return
+end
+hull=p(1:cut,:); tail=p(cut+1:end,:);
+deck=tail(tail(:,1)==0,:); rest=tail(tail(:,1)~=0,:);
+if isempty(deck), deck=tail(1,:); rest=tail(2:end,:); end
+reordered=true;
+while ~isempty(rest)
+    dh=vecnorm(rest-hull(end,:),2,2); dd=vecnorm(rest-deck(end,:),2,2);
+    [gapH,jh]=min(dh); [gapD,jd]=min(dd);
+    if norm(hull(end,:)-deck(end,:))<=min(gapH,gapD), break; end
+    if gapH<=gapD
+        if dd(jh)<gapH
+            take=jd; if dh(jd)<dd(jd), take=jh; end
+            deck=[deck;rest(take,:)]; rest(take,:)=[]; %#ok<AGROW>
+        else
+            hull=[hull;rest(jh,:)]; rest(jh,:)=[]; %#ok<AGROW>
+        end
+    elseif dh(jd)<gapD
+        take=jh; if dd(jh)<dh(jh), take=jd; end
+        hull=[hull;rest(take,:)]; rest(take,:)=[]; %#ok<AGROW>
+    else
+        deck=[deck;rest(jd,:)]; rest(jd,:)=[]; %#ok<AGROW>
+    end
+end
+guard=0;
+while ~isempty(rest) && guard<size(p,1)+5
+    guard=guard+1;
+    dh=vecnorm(rest-hull(end,:),2,2); dd=vecnorm(rest-deck(end,:),2,2);
+    [gapH,jh]=min(dh); [gapD,jd]=min(dd);
+    if min(gapH,gapD)>thr, break; end
+    if gapH<=gapD, hull=[hull;rest(jh,:)]; rest(jh,:)=[]; %#ok<AGROW>
+    else, deck=[deck;rest(jd,:)]; rest(jd,:)=[]; %#ok<AGROW>
+    end
+end
+if ~isempty(rest)
+    error('hull:BRI','Sealed half-section could not be ordered into one contour.');
+end
+p=[hull;flipud(deck)];
 end
 
 function a=numeric_line(s,n,line)

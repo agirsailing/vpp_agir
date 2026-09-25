@@ -87,13 +87,14 @@ classdef TestBri < matlab.unittest.TestCase
             t.verifyTrue(all([h.sections.closureAdjusted]));
             t.verifyEqual(h.sections(1).sourcePoints,[0 0;0 .1;1 .1;1 1.5]);
         end
-        function provisionalKayakRejectsTouchingContour(t)
+        function sealedKayakOrdersWovenSections(t)
             root=fileparts(fileparts(mfilename('fullpath')));
             o=t.Options; o.halfHull=true; o.axisSigns=[1 1 -1];
             o.halfHullClosure='seal';
-            % Station 1.4 returns to y=0 internally, then extends out again.
-            % Mirroring creates intersecting/touching contours; do not repair it.
-            t.verifyError(@()read_bri(fullfile(root,'data','kayak.bri'),o),'hull:Sections');
+            hull=read_bri(fullfile(root,'data','kayak.bri'),o);
+            woven=ismember(round([hull.sections.x],4),[1.4 1.6 1.8 2.0 2.2]);
+            t.verifyTrue(all([hull.sections(woven).closureAdjusted]));
+            t.verifyGreaterThan(size(hull.faces,1),0);
         end
     end
     methods(Access=private)
