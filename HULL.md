@@ -180,6 +180,81 @@ translation, dimensional scaling, density scaling, zero speed, range boundaries,
 negative residual preservation, invalid inputs and the existing environment
 structure. The example and tests require base MATLAB only.
 
+## Load a BRI hull into resistance
+
+From the repository root in MATLAB:
+
+```matlab
+addpath(pwd)
+addpath('examples')
+result = kayak_resistance(130); % total kayak + paddler + gear mass, kg
+```
+
+The example performs `read_bri -> solve_float -> resistance_hull ->
+delft_resistance`. It returns the extracted properties and the rejection
+message if the hull fails the Delft geometry screen. It never extrapolates.
+To use a different file or confirmed import settings, the underlying calls are:
+
+```matlab
+mesh = read_bri(filename, importOptions); % explicit, verified source mapping
+env = get_env_params();
+loading = struct('mass', totalMass, 'cg', cgBody); % kg and body-frame metres
+floating = solve_float(mesh, loading, ...
+    struct('mode','draft','heel',0,'trim',0), env);
+assert(floating.converged, floating.message)
+[resHull, hs] = resistance_hull(mesh, floating.pose, env);
+V = [0 .15 .25 .35 .45] * sqrt(env.g * resHull.LWL);
+[R, details] = delft_resistance(V, resHull, env);
+```
+
+`filename`, `importOptions`, `totalMass` and `cgBody` are user inputs.
+Fixed-attitude draft solving balances mass only. The example uses a clearly
+labelled placeholder CG, which does not affect its solved draft; it does not
+establish moment balance. The adapter rejects nonzero heel/trim and dry or
+fully submerged states. A prescribed upright pose can also be passed directly
+to `resistance_hull` when the waterline is known.
+
+The adapter measures maximum waterline beam from the waterplane cap and
+intersects the immersed triangular mesh at the midpoint of the waterline.
+With that immersed midship area `Am`, it uses `Cp=volume/(LWL*Am)` and
+`Cm=Am/(BWL*draft)`. This convention is explicit: for unusual shapes where
+the reference/maximal section differs from midship, review the coefficient
+definition before using a regression. It does not silently substitute a
+sampled maximum section. All longitudinal coordinates retain the mesh origin.
+
+### Provisional 130 kg kayak check (2026-09-28)
+
+MATLAB R2025a, repository freshwater density 997.8 kg/m³, zero heel/trim:
+
+| Quantity | Calculated value |
+| --- | ---: |
+| Draft | 0.128583 m |
+| Displacement volume | 0.130287 m³ |
+| Waterline length | 2.9600 m |
+| Waterline beam | 0.6026 m |
+| Wetted surface | 1.7246 m² |
+| Waterplane area | 1.4145 m² |
+| Cp (midship convention) | 0.7213 |
+| Cm | 0.7875 |
+| LCB distance aft of FPP / LWL | 0.460953 |
+
+The first rejection is `LCB_fpp/LWL < 0.500`. Independently, `Cp > 0.599`.
+No total resistance curve is returned for this kayak. Reversing x alone
+would not fix the excessive Cp. Confirm the source mapping and shape before
+deciding whether another resistance model is needed.
+
+These are numerical results for the provisional sealed mesh, not validated
+kayak predictions: the source mapping remains unconfirmed, all 16 sections
+require closure adjustments, and section correspondence affects the loft.
+The modelled waterline spans the complete imported station length. Inspect
+the shape and measured dimensions/waterline before physical use.
+
+`TestResistanceIntegration` checks analytical box properties, a tapered
+homothetic trapezoidal hull with analytical volume/waterplane/coefficients,
+successful resistance evaluation, mass-to-draft coupling, coordinate
+translation, unsupported poses and the actual 130 kg BRI rejection path.
+The synthetic hull is a numerical fixture, not physical validation of Delft.
+
 ## Sources
 
 1. Keuning, J.A. & Katgert, M. (2008). *A bare hull resistance prediction method

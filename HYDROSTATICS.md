@@ -3,7 +3,9 @@
 The pipeline is `read_bri -> hull -> hydrostatics / solve_float`. It uses base
 MATLAB (including `polyshape` and constrained Delaunay triangulation), and is
 tested with MATLAB R2025a. Geometry remains independent of loading and pose.
-The existing Moth setup and resistance model are not connected automatically.
+The existing Moth setup is not connected automatically. `resistance_hull`
+converts an upright immersed mesh into the inputs for `delft_resistance`;
+see [the integration example](HULL.md#load-a-bri-hull-into-resistance).
 
 ## Run the independent box example and tests
 
