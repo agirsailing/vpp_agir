@@ -68,7 +68,7 @@ After the first push, you can upload further commits with `git push`.
 
 ### 5. Open a pull request
 
-On [GitHub](https://github.com/agirsailing/vpp_agir), open a pull request from your feature branch into `main`.
+On [GitHub](https://github.com/agirsailing/vpp_agir), open a pull request from your feature branch into `dev`.
 
 Give it a clear title and briefly describe:
 - What you changed and why.
