@@ -17,10 +17,10 @@ cd vpp_agir
 
 ### 2. Create a feature branch
 
-Before starting new work, make sure your local `main` branch is up to date, then create a branch with a short, descriptive name:
+Before starting new work, make sure your local `dev` branch is up to date, then create a branch with a short, descriptive name:
 
 ```bash
-git switch main
+git switch dev
 git pull --ff-only
 git switch -c feature/add-drag-model
 ```
