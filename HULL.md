@@ -11,7 +11,8 @@ behaviour of the tested hulls at speed, rather than solving dynamic trim itself.
 ## Calling interface
 
 ```matlab
-[R, details] = delft_resistance(V, hull, env);
+[R, details] = delft_resistance(V, hull, env); % strict geometry screen
+% Optional fourth argument: struct('geometryPolicy','exploratory')
 ```
 
 `V` is speed **through water**, in m/s: a nonempty, real, nonnegative numeric
@@ -131,7 +132,7 @@ not claim speed-specific geometric validation.
 
 A negative fitted residual is preserved for diagnosis, not interpreted as
 thrust. Missing fields, malformed inputs, impossible geometry, unsupported
-ratios, unsupported speed or nonfinite calculations raise errors. An invalid
+ratios in strict mode, unsupported speed or nonfinite calculations raise errors. An invalid
 speed rejects the entire call, with its linear index in the message.
 Error identifiers are `delft:MissingField`, `delft:InvalidInput`,
 `delft:InvalidSpeed`, `delft:InvalidGeometry`, `delft:GeometryRange`,
@@ -254,6 +255,76 @@ homothetic trapezoidal hull with analytical volume/waterplane/coefficients,
 successful resistance evaluation, mass-to-draft coupling, coordinate
 translation, unsupported poses and the actual 130 kg BRI rejection path.
 The synthetic hull is a numerical fixture, not physical validation of Delft.
+
+## Explicit exploratory mode (provisional kayak)
+
+To obtain a runnable curve before the import can be checked with measurements:
+
+```matlab
+addpath(pwd)
+addpath('examples')
+result = kayak_resistance(130, struct('geometryPolicy','exploratory'));
+audit = kayak_geometry_diagnostics(result);
+```
+
+The three-argument `delft_resistance` and one-argument `kayak_resistance`
+remain strict. An optional scalar options struct accepts only `geometryPolicy`,
+with exact values `'strict'` (default) or `'exploratory'`; character vectors and
+scalar strings are supported. Unknown fields or invalid values raise
+`delft:InvalidOptions`. Exploratory mode bypasses **only** the empirical Table 1
+geometry screen. Physical input checks, Froude bounds, Reynolds and numerical
+guards remain active. No coefficients or geometry are adjusted to pass a screen.
+
+`details.validity.geometry` includes all eight `names`, `values`, `lower`,
+`upper`, individual `withinRange` flags and the aggregate `passed` flag.
+`details.validity.geometryPolicy` records the selected policy;
+`geometryExtrapolation` is true when the geometry fails the screen. A successful
+out-of-range call emits one `delft:GeometryExtrapolation` warning listing all
+failed ratios. Negative fitted terms and negative totals are preserved and
+flagged; they are not interpreted as thrust. Physical accuracy is unknown.
+
+The kayak example returns its import settings, loading, source mesh and figure
+handle along with the original result fields. Its plot shows total, friction and
+residuary resistance, assumed mass, failed bounds and negative-result counts.
+The example samples 121 moving speeds across `0.15 <= Fn <= 0.75`, plus rest.
+The zero-speed point is isolated: no line is drawn through unsupported low speeds.
+Calling the example in strict mode still returns the rejection without a plot.
+
+`kayak_geometry_diagnostics(result)` returns sampled immersed section areas,
+their sampled maximum and position, adjusted-section count and a figure handle.
+It reuses the same mesh section integration as the resistance adapter. The
+sampled maximum is diagnostic, not an exact optimizer or a substitute for the
+current midship coefficient convention. End sections are sampled just inside
+the caps.
+
+### Executed exploratory check (2026-09-28)
+
+MATLAB R2025a: all 46 tests passed; Code Analyzer reported no findings in the
+changed production functions. The 130 kg run returned finite resistance at rest
+and 121 moving speeds from 0.808 to 4.041 m/s. Three screen failures were reported:
+`LCB_fpp/LWL = 0.460953`, `Cp = 0.721306`, and
+`LCB_fpp/LCF_fpp = 1.00234`. Eleven moving samples had negative fitted residuary
+resistance; no samples had negative total resistance. The sampled maximum total
+was 138.305 N. These are extrapolated numerical outputs, not measured performance.
+
+The geometry audit found a sampled maximum immersed section of 0.0616763 m²
+at x = 1.5984 m, compared with the current midpoint area of 0.0610223 m² at
+x = 1.48 m. The plots show a nonzero terminal section at each end, especially
+at x = 2.96 m, and the waterline spans the entire imported length. All 16 sections
+remain closure-adjusted. This makes completeness of the source ends and the
+sealed approximation specific priorities for tomorrow's checks. The sampled
+maximum has not been substituted into the resistance coefficients.
+
+### Deferred measurement checks
+
+Confirm overall length and beam, bow/stern direction, units and whether the BRI
+contains the complete ends. Measure beam and keel-to-deck depth at identifiable
+stations; record their longitudinal locations. If practical, record bow/stern
+freeboards at a known total load. The present mass-only solution assumes zero
+trim and does not establish moment equilibrium. Sealed end caps, adjusted deck
+closures and loft correspondence remain provisional. Rerun the geometry screen
+after evidence-based corrections; investigate a better-suited method if the
+verified hull remains outside Delft's limits.
 
 ## Sources
 

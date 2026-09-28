@@ -1,4 +1,4 @@
-function [V, h, rho, nu, g, geometry] = delft_validate(V, h, env)
+function [V, h, rho, nu, g, geometry] = delft_validate(V, h, env, policy)
 %DELFT_VALIDATE Input contract and marginal ranges of 2008 Table 1.
 if ~(isnumeric(V) && isreal(V) && isvector(V) && ~isempty(V))
     error('delft:InvalidSpeed', 'V must be a nonempty real numeric scalar or vector.');
@@ -55,14 +55,16 @@ ratios = [LCB/h.LWL, h.Cp, h.volume^(2/3)/h.Awp, h.BWL/h.LWL, ...
 lower = [0.500 0.519 0.079 0.170 0.920 0.12 0.646 2.46];
 upper = [0.582 0.599 0.265 0.366 1.002 0.23 0.790 19.38];
 tol = 8 * eps(max(1, abs(ratios)));
-bad = find(~isfinite(ratios) | ratios < lower-tol | ratios > upper+tol, 1);
-if ~isempty(bad)
+withinRange = isfinite(ratios) & ratios >= lower-tol & ratios <= upper+tol;
+bad = find(~withinRange, 1);
+if ~isempty(bad) && strcmp(policy,'strict')
     error('delft:GeometryRange', ...
         'hull ratio %s=%.16g is outside the Table 1 screen [%.6g, %.6g].', ...
         labels{bad}, ratios(bad), lower(bad), upper(bad));
 end
-geometry = struct('passed', true, 'basis', 'Keuning-Katgert 2008 Table 1 printed marginal extrema', ...
-    'names', {labels}, 'values', ratios, 'lower', lower, 'upper', upper);
+geometry = struct('passed', all(withinRange), 'basis', 'Keuning-Katgert 2008 Table 1 printed marginal extrema', ...
+    'names', {labels}, 'values', ratios, 'lower', lower, 'upper', upper, ...
+    'withinRange', withinRange);
 end
 
 function checkStruct(value, label)

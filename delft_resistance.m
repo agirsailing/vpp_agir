@@ -1,4 +1,4 @@
-function [R, details] = delft_resistance(V, hull, env)
+function [R, details] = delft_resistance(V, hull, env, options)
 %DELFT_RESISTANCE Upright bare-hull resistance, Keuning-Katgert (2008).
 %   [R, DETAILS] = DELFT_RESISTANCE(V, HULL, ENV) returns resistance in N
 %   for a scalar or vector of speeds through water V [m/s]. Output arrays
@@ -14,8 +14,21 @@ function [R, details] = delft_resistance(V, hull, env)
 %   Table 1 bounds are a marginal geometry screen, not a validated envelope.
 %   No heel, leeway, appendage, sail-trim or foil-lift corrections are made.
 %   See HULL.md for equations, sources and limitations.
+%   OPTIONS.geometryPolicy: 'strict' (default) or 'exploratory'. The latter
+%   permits empirical geometry extrapolation only, with a warning/diagnostics.
 
-[V, hull, rho, nu, g, geometry] = delft_validate(V, hull, env);
+if nargin < 4, options = struct(); end
+if ~(isstruct(options) && isscalar(options)) || ...
+        any(~ismember(fieldnames(options), {'geometryPolicy'}))
+    error('delft:InvalidOptions', 'options must be a scalar struct with only geometryPolicy.');
+end
+if ~isfield(options,'geometryPolicy'), options.geometryPolicy = 'strict'; end
+policy = options.geometryPolicy;
+if ~((ischar(policy) && isrow(policy)) || (isstring(policy) && isscalar(policy))) || ...
+        ~any(strcmp(policy, {'strict','exploratory'}))
+    error('delft:InvalidOptions', 'geometryPolicy must be strict or exploratory.');
+end
+[V, hull, rho, nu, g, geometry] = delft_validate(V, hull, env, policy);
 Fn = V ./ sqrt(g * hull.LWL);
 moving = V > 0;
 % Permit only floating-point roundoff at the two inclusive endpoints.
@@ -59,7 +72,14 @@ details = struct('Rf', Rf, 'Rr', Rr, 'Fn', Fn, 'Re', Re, 'Cf', Cf);
 details.model = 'Keuning-Katgert 2008, eq. 1.7 / table 2; ITTC-1957 with LWL';
 details.validity = struct('withinSpeedRange', moving, ...
     'zeroSpeed', ~moving, 'geometry', geometry, ...
+    'geometryPolicy', char(policy), 'geometryExtrapolation', ~geometry.passed, ...
     'negativeResiduary', Rr < 0, 'negativeTotal', R < 0, ...
     'reducedHighSpeedDataset', Fn > 0.60, ...
     'note', 'Table 1 marginal screen only; joint and speed-specific validity not established.');
+if ~geometry.passed
+    details.validity.note = 'PROVISIONAL geometry extrapolation; physical accuracy unknown.';
+    warning('delft:GeometryExtrapolation', ...
+        'Provisional Delft geometry extrapolation: failed %s. Physical accuracy unknown.', ...
+        strjoin(geometry.names(~geometry.withinRange), ', '));
+end
 end

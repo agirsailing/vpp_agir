@@ -54,6 +54,30 @@ classdef TestResistanceIntegration < matlab.unittest.TestCase
             p.elevation=-1;
             t.verifyError(@()resistance_hull(mesh,p,env),'hull:ResistanceWaterplane');
         end
+        function exploratoryKayak(t)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            t.applyFixture(matlab.unittest.fixtures.PathFixture(fullfile(root,'examples')));
+            t.applyFixture(matlab.unittest.fixtures.SuppressedWarningsFixture('delft:GeometryExtrapolation'));
+            previous=get(groot,'DefaultFigureVisible');
+            cleanup=onCleanup(@()set(groot,'DefaultFigureVisible',previous)); %#ok<NASGU>
+            set(groot,'DefaultFigureVisible','off');
+            r=kayak_resistance(130,struct('geometryPolicy','exploratory'));
+            figCleanup=onCleanup(@()close(r.figure)); %#ok<NASGU>
+            t.verifyTrue(all(isfinite(r.resistance)));
+            t.verifyEmpty(r.delftError);
+            t.verifyTrue(r.details.validity.geometryExtrapolation);
+            g=r.details.validity.geometry;
+            t.verifyEqual(g.withinRange,g.values>=g.lower & g.values<=g.upper);
+            t.verifyFalse(g.withinRange(1)); t.verifyFalse(g.withinRange(2));
+            t.verifyEqual(r.resistance,r.details.Rf+r.details.Rr);
+        end
+        function sectionAreas(t)
+            env=get_env_params(); p=struct('heel',0,'trim',0,'elevation',1);
+            hs=hydrostatics(box_hull(),p,env);
+            for x=[.01 1 2 3 3.99]
+                t.verifyEqual(hgeom.immersed_section_area(hs.mesh,x),1,'AbsTol',1e-9);
+            end
+        end
         function kayakLoadedPipeline(t)
             root=fileparts(fileparts(mfilename('fullpath')));
             t.applyFixture(matlab.unittest.fixtures.PathFixture(fullfile(root,'examples')));

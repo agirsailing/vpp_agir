@@ -176,3 +176,47 @@ function testExistingEnvironment(t)
 [r,d] = delft_resistance(4,t.TestData.h,get_env_params());
 verifyTrue(t,isfinite(r)); verifyGreaterThan(t,d.Rf,0);
 end
+
+function testExploratoryAgreement(t)
+h=t.TestData.h; e=t.TestData.e; v=[0 .15 .425 .75]*sqrt(e.g*h.LWL);
+[r,d]=delft_resistance(v,h,e);
+[rx,dx]=delft_resistance(v,h,e,struct('geometryPolicy',"exploratory"));
+verifyEqual(t,rx,r); verifyEqual(t,dx.Rr,d.Rr);
+verifyTrue(t,all(dx.validity.geometry.withinRange));
+verifyFalse(t,dx.validity.geometryExtrapolation);
+end
+
+function testExploratoryMultipleFailures(t)
+h=t.TestData.h; e=t.TestData.e; h.Cp=.7; h.Cm=.8;
+o=struct('geometryPolicy','exploratory'); v=[0 .15 .4]*sqrt(e.g*h.LWL);
+verifyWarning(t,@()delft_resistance(v,h,e,o),'delft:GeometryExtrapolation');
+t.applyFixture(matlab.unittest.fixtures.SuppressedWarningsFixture('delft:GeometryExtrapolation'));
+[r,d]=delft_resistance(v,h,e,o);
+verifyEqual(t,find(~d.validity.geometry.withinRange),[2 7]);
+verifyFalse(t,d.validity.geometry.passed); verifyTrue(t,d.validity.geometryExtrapolation);
+verifyTrue(t,all(isfinite(r))); verifyEqual(t,r,d.Rf+d.Rr);
+verifyEqual(t,d.validity.negativeResiduary,d.Rr<0);
+verifyEqual(t,d.validity.negativeTotal,r<0);
+verifyLessThan(t,d.Rr(2),0);
+end
+
+function testExploratoryGuards(t)
+h=t.TestData.h; e=t.TestData.e; h.Cp=.7; o=struct('geometryPolicy','exploratory');
+verifyError(t,@()delft_resistance(.1*sqrt(e.g*h.LWL),h,e,o),'delft:SpeedRange');
+verifyError(t,@()delft_resistance(.8*sqrt(e.g*h.LWL),h,e,o),'delft:SpeedRange');
+verifyError(t,@()delft_resistance(NaN,h,e,o),'delft:InvalidSpeed');
+h.Cp=1.1;
+verifyError(t,@()delft_resistance(0,h,e,o),'delft:InvalidGeometry');
+h.Cp=.7; h.Swet=-1;
+verifyError(t,@()delft_resistance(0,h,e,o),'delft:InvalidInput');
+h=t.TestData.h; h.Cp=.7; e.water.nu=10;
+verifyError(t,@()delft_resistance(.4*sqrt(e.g*h.LWL),h,e,o),'delft:ReynoldsRange');
+e=t.TestData.e; h.Swet=realmax;
+verifyError(t,@()delft_resistance(.4*sqrt(e.g*h.LWL),h,e,o),'delft:NumericalRange');
+end
+
+function testOptionsValidation(t)
+for o={[],struct('geometryPolicy','typo'),struct('geometryPolicy',1),struct('typo','exploratory')}
+    verifyError(t,@()delft_resistance(0,t.TestData.h,t.TestData.e,o{1}),'delft:InvalidOptions');
+end
+end
