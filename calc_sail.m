@@ -42,13 +42,7 @@ if nargin < 8 || isempty(theta), theta = 0; end
 
 %% 1) Apparent wind from the velocity triangle (horizontal boat plane)
 aws = sqrt(tws^2 + VS^2 - 2*tws*VS*cos(pi - twa));   % [m/s]
-awa = asin( sin(pi - twa) * tws / aws );              % [rad] -- valid for AWA <= 90 deg
-
-% For AWA that can exceed 90 deg (reaching/running), use instead:
-% Vx  = tws*cos(twa) + VS;
-% Vy  = tws*sin(twa);
-% aws = hypot(Vx, Vy);
-% awa = atan2(Vy, Vx);
+awa = atan2(tws * sin(twa), tws * cos(twa) + VS);    % [rad] -- valid for all angles
 
 %% 2) Effective wind seen by the (heeled, pitched) rig -- eq. (34)-(35)
 awa_eff = atan( (tan(awa)*cos(phi) - sin(theta)*sin(phi)) / cos(theta) );
