@@ -1,4 +1,4 @@
-function [foil_data] = extract_data(table,Re)
+function [foil_data] = extract_data_foil(table,Re)
 % takes the xfoil data and keeps only the values corresponding to the
 % reynoldsnumber
 
