@@ -1,4 +1,5 @@
-function [diff_residuals,FH, Moments ,CPx,CPy,CPz,alfa_vec] = calc_foil(surge, heave, heel, pitch, leeway, rake, rudder_angle, sections_yzc,env,moth,plotflag,Target_Loads)
+function [diff_residuals,FH, Moments ,CPx,CPy,CPz,alfa_vec] = ...
+    calc_foil(surge, heave, heel, pitch, leeway, rake, rudder_angle, sections_yzc,env,moth,plotflag,Target_Loads)
 %
 % surge        [m/s] Forward boat speed
 % heave        [m]   Vertical displacement (positive downwards)
@@ -29,9 +30,11 @@ function [diff_residuals,FH, Moments ,CPx,CPy,CPz,alfa_vec] = calc_foil(surge, h
 %-------------------------------------------------------------------------
 if nargin<11;plotflag = false;end    % To make this argument optional
 if nargin<12;Target_Loads = [0;0;0;0;0;0];end % To make this argument optional
+
+thisDir = fileparts(which('calc_foil'));
+addpath(genpath(fullfile(thisDir, 'Helper_functions')));
     
 % For clarity
-
 q        = 0.5*1000*surge^2;  % [N/m2] Dynamic pressure 
 
 % Cut wet sections, keep only the submerged part of the foil
