@@ -19,14 +19,15 @@ function moth = get_boat_params()
     moth.z_boat_cg = -0.30;         % [m] vertical CG (above deck)
        
     %%  Hull 
-    moth.L_wl        = 3.325;       % [m] waterline length 
-    moth.T_hull      = NaN;         % [m] canoe body draught at full displacement
-    moth.A_wp        = NaN;         % [m^2] waterplane area
-    moth.S_wet_hull  = NaN;         % [m^2] wetted surface at full displacement
-    moth.Cp_hull     = NaN;         % [-] prismatic coefficient 
-    moth.LCB_hull    = NaN;         % [-] LCB position 
-    moth.k_hull      = 0.0;         % [-] hull form factor k, used as (1+k). DSYHS convention: 0
-    moth.z_hull_bottom = 0.25;      % [m] deck to hull bottom (z down)
+    moth.L_wl        = 3.325;          % [m] waterline length 
+    moth.T_hull      = NaN;            % [m] canoe body draught at full displacement
+    moth.A_wp        = NaN;            % [m^2] waterplane area
+    moth.S_wet_hull  = NaN;            % [m^2] wetted surface at full displacement
+    moth.Cp_hull     = NaN;            % [-] prismatic coefficient 
+    moth.LCB_hull    = NaN;            % [-] LCB position 
+    moth.k_hull      = 0.0;            % [-] hull form factor k, used as (1+k). DSYHS convention: 0
+    moth.z_hull_bottom = 0.25;         % [m] deck to hull bottom (z down)
+    moth.preCalc = 'preCalcHull.mat';  % [mat] precalculated resistance/displacement table
         
     %%  Main vertical
     moth.mv_profile  = 'NACA0012';
@@ -47,11 +48,13 @@ function moth = get_boat_params()
     moth.f1_aoa_min  = -3;          % [deg] 
     moth.f1_aoa_max  = 6;           % [deg]
     moth.f1_CLmax    = NaN;         % [-] from polar at aoa_max
+    moth.f1_flap_min = deg2rad(-10);% [rad] Physical minimum flap angle
+    moth.f1_flap_max = deg2rad(15); % [rad] Physical maximum flap angle
+    
     moth.f1_S        = foil_area(moth.f1_planform, moth.f1_span, ...
                                  moth.f1_c_root, moth.f1_c_tip);  % [m^2]
-
     %% Foil Lift and Drag data
-    % moth.r_foildata = readtable("DATA_NACA2008.csv");
+    moth.r_foildata = readtable("DATA_NACA2008.csv");
 
     %%  Rudder vertical 
     moth.rv_profile  = 'NACA0012';
@@ -70,6 +73,9 @@ function moth = get_boat_params()
     moth.f2_h_end    = 0;           % [m] 
     moth.f2_aoa_max  = 3;           % [deg] 
     moth.f2_CLmax    = NaN;         % [-]
+    moth.f2_sections = [0.00,  0.00, 0.12; 
+                        0.00, -0.55, 0.10; 
+                        0.00, -1.10, 0.08]'; % [y, z, chord]
     moth.f2_S        = foil_area(moth.f2_planform, moth.f2_span, ...
                                  moth.f2_c_root, moth.f2_c_tip);  % [m^2]
     
@@ -78,7 +84,7 @@ function moth = get_boat_params()
     
     %%  Rig/sail 
     moth.S_sail      = 8.25;        % [m^2] Mach2 sail
-    moth.b_sail      = NaN;         % [m] sail span (AR = b^2/S)
+    moth.b_sail      = 5.1;         % [m] sail span (AR = b^2/S)
     moth.z_CE_sail   = -2.317;      % [m] sail CE, negative = above hull
     moth.CLmax_sail  = 1.5;         % [-] 
     moth.k_sail      = 1.05;        % [-] sail form factor (1+k)
