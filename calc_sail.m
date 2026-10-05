@@ -57,12 +57,12 @@ rho_air = env.air.rho;                 % [kg/m^3]
 q_eff   = 0.5 * rho_air * V_eff^2;     % [Pa]
 
 A = moth.S_sail;                       % [m^2]
-if isnan(moth.length_sail)
+if isnan(moth.b_sail)
     error(['moth.length_sail (sail span) is NaN -- get_boat_params.m does not ' ...
            'set it. Assign an assumed span to moth.length_sail before calling ' ...
            'calc_sail, e.g. moth.length_sail = 3.5; %% [m]']);
 end
-AR = moth.length_sail^2 / A;                % [-]
+AR = moth.b_sail^2 / A;                % [-]
 
 a0   = 2*pi;                           % [1/rad] thin-aerofoil 2D lift slope
 e0   = 0.85;                           % [-] span efficiency  -- TUNE
