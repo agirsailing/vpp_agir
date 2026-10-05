@@ -1,8 +1,11 @@
 function make_preCalcHull(brifile, outfile, plotflag, z_down, bow_at_max_x)
-% Hull table (R_, V_, H_, VS_) for calc_hull.m, Findlay & Turnock (2008):
-% ITTC-57 friction + Delft (Keuning & Katgert 2008) residuary resistance.
+% Hull table (R_, V_, xB_, H_, VS_) for calc_hull.m, Findlay & Turnock (2008):
+% ITTC-57 friction (0.7*Lwl, form factor k_hull) + Delft residuary resistance
+% (Keuning & Katgert 2008, eq. 1.7, valid Fn 0.15 - 0.75).
 % Hydrostatics with the course functions (ReadHullGeometry, WetSections,
 % CalculateHydrostatics). H < 0 = hull bottom below the water.
+% xB_ = x position of the centre of buoyancy, in the .bri x-coordinates
+% (must be the boat coordinates: origin at the stern, x forward).
 
 if nargin < 3, plotflag = false; end
 if nargin < 4, z_down = true; end
@@ -13,23 +16,26 @@ projectRoot = fileparts(thisDir);
 addpath(projectRoot);
 addpath(genpath(thisDir));
 
-
 env = get_env_params();
 boat = get_boat_params();
 rho = env.water.rho;
 nu = env.water.nu;
 g = env.g;
 m = boat.m_tot;
-k_hull = 0;
+k_hull = boat.k_hull;           % [-] form factor k (DSYHS convention: k = 0)
 VS_ = 0.5:0.25:12;
 
 %% Geometry
 ship = ReadHullGeometry(brifile);
 if z_down
-    ship.z = -ship.z; % course tools use z up
+    ship.z = -ship.z; % ship design scripts use z up
 end
 
-ship.KG = boat.z_boat_cg;
+% KG = CG height above the keel (course tools, z up). Only used for the
+% stability outputs of the course tools, not for volume or wetted area.
+z_cg = boat.z_cg;
+ship.KG = boat.z_hull_bottom - z_cg;    % [m] keel is z_hull_bottom below deck, CG is z_cg (z down)
+
 ship.zk = zeros(1, ship.ns);
 zmax = -inf;
 
@@ -75,18 +81,22 @@ full = hydro(ship, -d0, env, bow_at_max_x);
 %% Table
 H_ = linspace(-1.25*d0, 0, 26);
 nH = numel(H_);
-V_ = zeros(1, nH); S_ = zeros(1, nH); L_ = zeros(1, nH);
+V_ = zeros(1, nH); S_ = zeros(1, nH); L_ = zeros(1, nH); xB_ = NaN(1, nH);
 
 for i = 1:nH
     hs = hydro(ship, H_(i), env, bow_at_max_x);
-    V_(i) = hs.V; S_(i) = hs.S; L_(i) = hs.Lwl;
+    V_(i) = hs.V; S_(i) = hs.S; L_(i) = hs.Lwl; xB_(i) = hs.xB;
 end
+
+% Dry rows have no centre of buoyancy: use the nearest wet value so that
+% interpolation near the surface stays finite (V = 0 there anyway)
+wet = V_ > 0;
+xB_(~wet) = interp1(find(wet), xB_(wet), find(~wet), 'nearest', 'extrap');
 
 [RrPerW, Fn_tab] = delft_rr_per_weight(full);
 Fn = VS_ / sqrt(g*full.Lwl);
-Fn_hold = 0.70; % Fn = 0.75 row gives Rr ~ 0, not used
-keep = Fn_tab <= Fn_hold + 1e-9;
-rr = interp1([0 Fn_tab(keep)], [0 RrPerW(keep)], min(Fn, Fn_hold), 'pchip');
+Fn_hold = 0.75; % Last row of the Delft table, Rr/W held constant above
+rr = interp1([0 Fn_tab], [0 RrPerW], min(Fn, Fn_hold), 'pchip');
 
 R_ = zeros(nH, numel(VS_));
 
@@ -99,11 +109,11 @@ for i = 1:nH
     R_(i,:) = Rf + Rr;
 end
 
-save(outfile, 'R_', 'V_', 'H_', 'VS_');
+save(outfile, 'R_', 'V_', 'xB_', 'H_', 'VS_');
 
 fprintf('Mass %.1f kg -> draft %.3f m, LWL %.3f m, BWL %.3f m\n', m, d0, full.Lwl, full.Bwl);
-fprintf('Swet %.3f m2, Awp %.3f m2, Cp %.3f, Cm %.3f, LCB/LWL %.3f\n', ...
-    full.S, full.Aw, full.Cp, full.Cm, full.LCBfpp/full.Lwl);
+fprintf('Swet %.3f m2, Awp %.3f m2, Cp %.3f, Cm %.3f, LCB/LWL %.3f, xB %.3f m\n', ...
+    full.S, full.Aw, full.Cp, full.Cm, full.LCBfpp/full.Lwl, full.xB);
 
 if plotflag
     figure; subplot(1,2,1); plot(-H_, V_*rho, 'o-', LineWidth=1.2); grid on
@@ -131,7 +141,7 @@ hs.Bwl = max(WS.bwl);
 hs.Ax = max(abs(WS.Aws));
 hs.Tc = max(-H, 0);
 hs.Cm = hs.Ax / max(hs.Bwl*hs.Tc, eps);
-hs.Lwl = 0; hs.Cp = NaN; hs.LCBfpp = NaN; hs.LCFfpp = NaN;
+hs.Lwl = 0; hs.Cp = NaN; hs.LCBfpp = NaN; hs.LCFfpp = NaN; hs.xB = NaN;
 
 zwl = ship.zkeel - H;
 zk = ship.zk; n = ship.ns;
@@ -150,6 +160,7 @@ hs.Lwl = xf - xa;
 hs.Cp = hs.V / (hs.Lwl*hs.Ax);
 xB = HS.CoB(1);
 xF = trapz(x, x.*WS.bwl) / hs.Aw;
+hs.xB = xB;                         % [m] centre of buoyancy, .bri x-coordinates
 
 if bow_at_max_x
     hs.LCBfpp = xf - xB; hs.LCFfpp = xf - xF;
@@ -159,24 +170,26 @@ end
 end
 
 function [RrPerW, Fn] = delft_rr_per_weight(h)
-% Rr/(rho g V) = (a0 + a1*LCB/L + a2*Cp + a3*V^(2/3)/Aw + a4*B/L
-%                + a5*LCB/LCF + a6*B/Tc + a7*Cm) * V^(1/3)/L
+% Keuning & Katgert (2008), eq. 1.7:
+% Rr/(rho g V) = a0 + (a1*LCB/L + a2*Cp + a3*V^(2/3)/Aw + a4*B/L
+%                     + a5*LCB/LCF + a6*B/Tc + a7*Cm) * V^(1/3)/L
 [Fn, a] = delft_coefficients();
 Fn = Fn.';
 L = h.Lwl; V = h.V; s = V^(1/3)/L;
-X = [1, h.LCBfpp/L, h.Cp, V^(2/3)/h.Aw, h.Bwl/L, h.LCBfpp/h.LCFfpp, h.Bwl/h.Tc, h.Cm];
+X = [h.LCBfpp/L, h.Cp, V^(2/3)/h.Aw, h.Bwl/L, h.LCBfpp/h.LCFfpp, h.Bwl/h.Tc, h.Cm];
 
+% Parameter range of the models in the regression (Table 1)
 names = {'LCB/LWL','Cp','V^(2/3)/Aw','BWL/LWL','LCB/LCF','BWL/Tc','Cm','V^(1/3)/LWL'};
-val = [X(2:8) s];
-lo = [0.500 0.521 0.079 0.170 0.930 2.46 0.646 0.120];
-hi = [0.579 0.580 0.265 0.366 1.002 19.38 0.790 0.230];
+val = [X s];
+lo = [0.500 0.519 0.12 0.170 0.920  2.46 0.646 0.079];
+hi = [0.582 0.599 0.23 0.366 1.002 19.38 0.790 0.265];
 fprintf('Delft applicability (value / series range):\n');
 for i = 1:numel(val)
     flag = ''; if val(i) < lo(i) || val(i) > hi(i), flag = '  <-- OUTSIDE'; end
     fprintf('  %-12s %7.3f   [%6.3f %6.3f]%s\n', names{i}, val(i), lo(i), hi(i), flag);
 end
 
-RrPerW = max(((a*X.') * s).', 0);
+RrPerW = max(a(:,1) + (a(:,2:end)*X.')*s, 0).';   % a0 is NOT multiplied by s
 end
 
 function [Fn, a] = delft_coefficients()

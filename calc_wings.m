@@ -20,12 +20,9 @@ function [Fbody_N, out] = wings(VairRelBoat_body_mps, moth, env)
 %   NASA "Drag Equation"
 %   https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/drag-equation/
 
-    % Find the wing entry in moth.windage.
-    wingID = find(strcmpi(moth.windage.names, 'wings'), 1);
-
     % Wing reference area and drag coefficient.
-    S  = moth.windage.S(wingID);
-    CD = moth.windage.CD(wingID);
+    S  = moth.S_wings_m2;
+    CD = moth.wings_CD;
 
     if isnan(S) || isnan(CD)
         error('Set moth.windage.S and CD for the wings.');
