@@ -100,7 +100,7 @@ Re = surge*moth.f2_c_root/env.water.nu; % reynolds number
 
 foil_data = moth.r_foildata;
 % extract data corresponding to the closest Re from table
-Re_table = extract_data(foil_data,Re);
+Re_table = extract_data_foil(foil_data,Re);
 
 % make alpha cl and alpha cd array 
 a_cl = [Re_table.alpha,Re_table.CL];
@@ -110,8 +110,8 @@ FH=[0,0,0]';
 % test for interpolation in data table instead of empirical formulas
 for ipanel=1:npanels
     alfa_deg = alfa_vec(ipanel) * (180/pi);
-    Cl   = interp1(a_cl(:,1),a_cl(:,2),alfa_deg);    % [-] 2D-lift interpolated from xfoil data.
-    Cd   = interp1(a_cd(:,1),a_cd(:,2),alfa_deg);    % [-] 2D-drag interpolated from xfoil data.
+    Cl   = interp1(a_cl(:,1),a_cl(:,2),alfa_deg,'linear','extrap');    % [-] 2D-lift interpolated from xfoil data.
+    Cd   = interp1(a_cd(:,1),a_cd(:,2),alfa_deg,"linear","extrap");    % [-] 2D-drag interpolated from xfoil data.
     CL   = Cl/(1+2/(e*AR));             % [-] 3D lift-correction.
     L    = q*CL*A_vec(ipanel);          % [N] Total panel lift (in the yz-plane).
     CDi  = CL^2/(pi*e*AR);              % [-] Induced drag coeff.
