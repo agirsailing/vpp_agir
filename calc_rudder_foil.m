@@ -1,5 +1,5 @@
 function [diff_residuals,FH, Moments ,CPx,CPy,CPz,alfa_vec] = ...
-    calc_foil(surge, heave, heel, pitch, leeway, rake, rudder_angle, sections_yzc,env,moth,plotflag,Target_Loads)
+    calc_rudder_foil(surge, heave, heel, pitch, leeway, rake, rudder_angle, sections_yzc,env,moth,plotflag,Target_Loads)
 %
 % surge        [m/s] Forward boat speed
 % heave        [m]   Vertical displacement (positive downwards)
@@ -31,17 +31,25 @@ function [diff_residuals,FH, Moments ,CPx,CPy,CPz,alfa_vec] = ...
 if nargin<11;plotflag = false;end    % To make this argument optional
 if nargin<12;Target_Loads = [0;0;0;0;0;0];end % To make this argument optional
 
-thisDir = fileparts(which('calc_foil'));
-addpath(genpath(fullfile(thisDir, 'Helper_functions')));
     
 % For clarity
-q        = 0.5*1000*surge^2;  % [N/m2] Dynamic pressure 
+q        = 0.5*env.water.rho*surge^2;  % [N/m2] Dynamic pressure 
 
 % Cut wet sections, keep only the submerged part of the foil
 [Ywet,Zwet] = cut_wet_sections(sections_yzc(1,:),sections_yzc(2,:), heave);
 sections_yzc = [Ywet; Zwet; sections_yzc(3,end-length(Ywet)+1:end)];
 sections_yzc = sections_yzc';
 npanels  = length(sections_yzc(:,1))-1; % Number of wet panels in foil
+
+
+% safety if out of water
+if npanels < 1
+    diff_residuals = Target_Loads;
+    FH = [0; 0; 0]; Moments = [0; 0; 0];
+    CPx = [0; 0; 0]; CPy = [0; 0; 0]; CPz = [0; 0; 0];
+    alfa_vec = [];
+    return;
+end
 
 % Boat Frame Rotation
 c1=cos(heel);   s1=sin(heel);   % Pre-calculate the trigonometric functions
@@ -60,7 +68,7 @@ c5 = cos(rudder_angle) ; s5 = sin(rudder_angle);
 Ty_rake =   [ c4 0 s4 ; 0  1  0; -s4 0 c4];
 Tz_rudder = [c5 -s5 0 ; s5 c5 0;  0  0  1];
 
-T  = Tx*Ty_pitch*Tz_leeway*Ty_rake*Tz_rudder; % Total transformation matrix (order matters!!)
+T  = Ty_pitch*Tx*Tz_leeway*Ty_rake*Tz_rudder; % Total transformation matrix (order matters!!)
 
 % Now we need to do some panel-geometry calculations.  Loop through your 
 % panels and rotate them according to Heel, leeway and rake.
@@ -150,7 +158,9 @@ Fz_ = FH_panels(3,:);  % [N] All panel contributions-vector
 x_  = mid_vec(1,:);    % [m] Panels mid-points
 y_  = mid_vec(2,:);    % [m] Panels mid-points
 z_  = mid_vec(3,:);    % [m] Panels mid-points
-Moments = [Fz_*y_'+Fy_*z_';Fx_*z_'+Fz_*x_';Fx_*y_'+Fy_*x_']; % [Nm] Total moments around the 3 axes at clamping
+Moments = [Fz_*y_'-Fy_*z_';
+           Fx_*z_'-Fz_*x_';
+           Fy_*x_'-Fx_*y_']; % [Nm] Total moments around the 3 axes at clamping
  
 % Target_Loads = [Fx_target; Fy_target; Fz_target; Mx_target; My_target; Mz_target]
 actual_loads = [FH(1); FH(2); FH(3); Moments(1); Moments(2); Moments(3)];
@@ -191,11 +201,11 @@ if plotflag;
  fprintf('Min angle of attack %.1f deg \n',min(alfa_vec)*180/pi);
 end
 
-
-fprintf('Surge  = %.2f m/s\n', surge);
-fprintf('Heave  = %.2f m\n', heave);
-fprintf('Heel   = %.1f deg\n', rad2deg(heel));
-fprintf('Pitch  = %.1f deg\n', rad2deg(pitch));
-fprintf('Leeway = %.1f deg\n', rad2deg(leeway));
-fprintf('Rake   = %.1f deg\n', rad2deg(rake));
-fprintf('Rudder = %.1f deg\n', rad2deg(rudder_angle));
+% 
+% fprintf('Surge  = %.2f m/s\n', surge);
+% fprintf('Heave  = %.2f m\n', heave);
+% fprintf('Heel   = %.1f deg\n', rad2deg(heel));
+% fprintf('Pitch  = %.1f deg\n', rad2deg(pitch));
+% fprintf('Leeway = %.1f deg\n', rad2deg(leeway));
+% fprintf('Rake   = %.1f deg\n', rad2deg(rake));
+% fprintf('Rudder = %.1f deg\n', rad2deg(rudder_angle));
