@@ -86,10 +86,14 @@ D = q_eff * A * CD;                    % [N] drag, along apparent wind
 F_D  = L*sin(awa) - D*cos(awa);        % [N] driving force, +fwd
 F_SF = L*cos(awa) + D*sin(awa);        % [N] side (heeling) force, + to leeward
 
-% Heel and pitch tilt that horizontal-plane force out of the x-y plane.
+% % Heel and pitch tilt that horizontal-plane force out of the x-y plane.
+% R_heel  = [1 0 0; 0 cos(phi) -sin(phi); 0 sin(phi) cos(phi)];
+% R_pitch = [cos(theta) 0 sin(theta); 0 1 0; -sin(theta) 0 cos(theta)];
+% FA = R_pitch * R_heel * [F_D; F_SF; 0];
 R_heel  = [1 0 0; 0 cos(phi) -sin(phi); 0 sin(phi) cos(phi)];
 R_pitch = [cos(theta) 0 sin(theta); 0 1 0; -sin(theta) 0 cos(theta)];
 FA = R_pitch * R_heel * [F_D; F_SF; 0];
+% FA = [F_D; F_SF; 0];
 
 %% 5) Centre of effort
 CEA = -moth.z_CE_sail;                 % [m] height above deck (z is +down in moth frame)
