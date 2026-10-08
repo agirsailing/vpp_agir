@@ -14,7 +14,7 @@
 %                         (Mx + = heel to stbd, My + = bow up)
 % out    struct with diagnostics (angles, CLs, drag, ...)
 
-function [F, M, out] = calc_main_foil(VS, h, theta, delta, FY, moth, env)
+function [F, M, out] = calc_main_foil(VS, h, heel, theta, delta, FY, moth, env)
 
     % Enviroment 
     rho = env.water.rho;                % [kg/m3]
@@ -35,11 +35,22 @@ function [F, M, out] = calc_main_foil(VS, h, theta, delta, FY, moth, env)
     Ss = sw*cs;                         % [m2] Wetted vertical area (one side)
     ARs = 2*sw/cs;                      % [-] Effective AR
     
-    % Points of application, relative to the combined CG
-    z_foil = moth.z_hull_bottom + moth.mv_span;         % [m] Horizontal foil z
-    r_foil = [moth.f1_x; 0; z_foil] - moth.r_cg;        % [m] CG -> foil CE
-    r_str = [moth.f1_x; 0; z_foil - sw/2] - moth.r_cg;  % [m] CG -> vertical CE
+    % % Points of application, relative to the combined CG
+    % z_foil = moth.z_hull_bottom + moth.mv_span;         % [m] Horizontal foil z
+    % r_foil = [moth.f1_x; 0; z_foil] - moth.r_cg;        % [m] CG -> foil CE
+    % r_str = [moth.f1_x; 0; z_foil - sw/2] - moth.r_cg;  % [m] CG -> vertical CE
     
+    % Points of application, relative to the combined CG (Rotated to Earth Frame)
+    z_foil = moth.z_hull_bottom + moth.mv_span;
+
+    % Use 'heel' and the existing 'theta' (pitch)
+    R_heel  = [1 0 0; 0 cos(heel) -sin(heel); 0 sin(heel) cos(heel)];
+    R_pitch = [cos(theta) 0 sin(theta); 0 1 0; -sin(theta) 0 cos(theta)];
+    R_boat2earth = R_pitch * R_heel;
+    
+    r_foil = R_boat2earth * ([moth.f1_x; 0; z_foil] - moth.r_cg);
+    r_str = R_boat2earth * ([moth.f1_x; 0; z_foil - sw/2] - moth.r_cg);
+
     % Horizontal foil: lift and drag
     alpha1 = theta + delta;                             % [rad] Foil angle of attack
     foil_wet = h > 0;                                   % Foil below the free surface
@@ -60,9 +71,14 @@ function [F, M, out] = calc_main_foil(VS, h, theta, delta, FY, moth, env)
     end
     D1 = q*S1*(CDp1 + CDi1 + CDw1);                     % [N] Total foil drag
     
+    % Earth-y force of the foil = cos(heel)*FYloc + sin(heel)*L1 must equal FY,
+% so the strut only supplies what the tilted lift does not
+FYloc = (FY - sin(heel)*L1)/cos(heel);
+
     % Vertical foil: side force (sway) and drag
     if sw > 0
-        CLs = FY/(q*Ss);                                % [-] Required side force coeff. (3D)
+        % CLs = FY/(q*Ss); 
+        CLs = FYloc/(q*Ss);                               % [-] Required side force coeff. (3D)
         CLas = Cla/(1+2/(e*ARs));                       % [1/rad] 3D lift slope
         leeway = CLs/CLas;                              % [rad] Leeway needed
         Cls = Cla*leeway;                               % [-] 2D section lift
@@ -82,8 +98,8 @@ function [F, M, out] = calc_main_foil(VS, h, theta, delta, FY, moth, env)
     end
     
     % Forces and moments
-    F_foil = [-D1; 0; -L1];                             % [N] z down, so lift is negative
-    F_str = [-(Dv + Dspray); FY*(sw > 0); 0];           % [N] no side force if dry
+    F_foil = R_boat2earth*[-D1; 0; -L1];                             % [N] z down, so lift is negative
+    F_str  = R_boat2earth*[-(Dv + Dspray); FYloc*(sw > 0); 0];           % [N] no side force if dry
     F = F_foil + F_str;                                 % [N] Total force
     M = cross(r_foil,F_foil) + cross(r_str,F_str);      % [Nm] Moment about combined CG
     
