@@ -2,7 +2,13 @@ function [Ywet,Zwet] = cut_wet_sections(Y,Z,H)
 % Take out the wet secions
 
 
-wet_points = Z<H; % All points (0=in air, 1=in water)
+wet_points = Z>H;   % All points (0=in air, 1=in water). 
+                    % z is down, H = waterline z in the hull frame
+
+if ~any(wet_points)          % Foil completely out of the water
+    Ywet = []; Zwet = [];
+    return
+end
 
 n = [];
 m = [];

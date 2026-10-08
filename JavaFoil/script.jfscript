@@ -1,0 +1,8 @@
+Name = /Users/Micke/Documents/SolidWing/Wing kopia 2/H3_2/JavaFoil/Wing1.txt
+Mach = 0; Re = 8000000; T.U. = 1.0; T.L. = 1.0
+Surface Finish = 1; Stall model = 0; Transition model = 1; Aspect Ratio = 0; ground effect = 0
+?	Cl	Cd	Cm 0.25	T.U.	T.L.	S.U.	S.L.	L/D	A.C.	C.P.
+[¡]	[-]	[-]	[-]	[-]	[-]	[-]	[-]	[-]	[-]	[-]
+0.0	2.083	0.02893	-0.160	0.507	0.930	0.941	0.951	72.002	0.250	0.327
+
+
