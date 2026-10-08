@@ -11,7 +11,7 @@ function moth = get_boat_params()
     moth.m_tot       = moth.m_boat+moth.m_sailor;
 
     moth.x_crew      = 1.500;       % [m] sailor position (fixed LCG)
-    moth.z_crew      = NaN;         % [m] sailor CG height (above deck = negative)
+    moth.z_crew      = -0.6;         % [m] sailor CG height (above deck = negative)
     
     %% Center of gravity (boat only)
     moth.x_boat_cg   = 1.770;       % [m]
@@ -50,7 +50,7 @@ function moth = get_boat_params()
     moth.f1_CLmax    = NaN;         % [-] from polar at aoa_max
     moth.f1_flap_min = deg2rad(-10);% [rad] Physical minimum flap angle
     moth.f1_flap_max = deg2rad(15); % [rad] Physical maximum flap angle
-    
+
     moth.f1_S        = foil_area(moth.f1_planform, moth.f1_span, ...
                                  moth.f1_c_root, moth.f1_c_tip);  % [m^2]
     %% Foil Lift and Drag data
@@ -59,8 +59,10 @@ function moth = get_boat_params()
     %%  Rudder vertical 
     moth.rv_profile  = 'NACA0012';
     moth.rv_span     = 1.100;       % [m] hull level to rudder foil
-    moth.rv_chord    = NaN;         % [m] 
+    moth.rv_chord    = 0.15;         % [m] 
     moth.rv_tc       = 0.12;        % [-]
+    moth.rv_sections = [0.0, 0.00, moth.rv_chord;
+                        0.0, moth.rv_span, moth.rv_chord]';
         
     %%  Rudder horizontal foil
     moth.f2_profile  = 'NACA0008';
@@ -68,14 +70,14 @@ function moth = get_boat_params()
     moth.f2_x        = 0.000;       % [m] CE
     moth.f2_span     = 0.600;       % [m]
     moth.f2_c_root   = 0.120;       % [m]
-    moth.f2_c_tip    = NaN;         % [m]
+    moth.f2_c_tip    = 0.08;         % [m]
     moth.f2_tc       = 0.08;        % [-]
-    moth.f2_h_end    = 0;           % [m] 
-    moth.f2_aoa_max  = 3;           % [deg] 
+    moth.f2_h_end    = 0;           % [m]
+    moth.f2_aoa_max  = 3;           % [deg]
     moth.f2_CLmax    = NaN;         % [-]
-    moth.f2_sections = [0.00,  0.00, 0.12; 
-                        0.00, -0.55, 0.10; 
-                        0.00, -1.10, 0.08]'; % [y, z, chord]
+    moth.f2_sections = [-moth.f2_span/2, moth.rv_span, moth.f2_c_tip;
+                         0.0,            moth.rv_span, moth.f2_c_root;
+                         moth.f2_span/2, moth.rv_span, moth.f2_c_tip]'; % [y, z, chord] horizontal elevator
     moth.f2_S        = foil_area(moth.f2_planform, moth.f2_span, ...
                                  moth.f2_c_root, moth.f2_c_tip);  % [m^2]
     
