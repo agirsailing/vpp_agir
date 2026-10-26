@@ -1,4 +1,4 @@
-function residuals = calc_residuals_Newton(state, env, moth, TW, TWS, TWA)
+function [residuals] = calc_residuals_Newton(state, env, moth, TW, TWS, TWA)
 
 % Unpack the 5-DOF state vector requested by the solver
 VS     = state(1); % Surge (Forward boat speed)
@@ -20,26 +20,12 @@ R_boat2earth = R_pitch * R_heel;
 TWA_eff = TWA - leeway;
 
 % Calculate aerodynamic force components vector FA and Center of Effort
-[FA, CEA, ~] = calc_sail(moth, env, TW, VS, TWS, TWA_eff, heel, pitch);
+[FA, CEA, alfa_sail] = calc_sail(moth, env, TW, VS, TWS, TWA_eff, heel, pitch);
 
 % Divide into force vectors 
 FAX = FA(1);
 FAY = FA(2);
 FAZ = FA(3);
-
-%--------------------------------------------------------------------------
-% Parasitic Aerodynamic Drag (Wings + Windage)
-%--------------------------------------------------------------------------
-% Apparent wind velocity vector in boat frame: [Vx; Vy; Vz]
-V_air_rel = [ -VS - TWS*cos(TWA_eff);
-              -TWS*sin(TWA_eff);
-               0 ];
-
-% Wing aero drag via calc_wings.m
-[F_wings, ~] = calc_wings(V_air_rel, moth, env);
-
-% Total aero resistance in surge (-x direction)
-F_aero_drag_X = F_wings(1);
 
 %--------------------------------------------------------------------------
 % Hydrodynamic calculations
@@ -88,7 +74,7 @@ FY_target = -(FAY + FH_rudder(2));
 % Equilibrium equations
 %--------------------------------------------------------------------------
 % Calculate the 5-DOF residuals 
-F_surge = FAX + F_aero_drag_X +  hull_surge + F_main(1) + FH_rudder(1); 
+F_surge = FAX + hull_surge + F_main(1) + FH_rudder(1);
 F_heave = FAZ + hull_heave + F_main(3) + FH_rudder(3) + moth.weight_tot; 
 
 % Moments about the boat CG  
@@ -101,4 +87,5 @@ F_sway  = leeway - out_main.leeway;
 
 % Output array for the Newton solver
 residuals = [F_surge; F_heave; M_heel; M_pitch; F_sway];
+
 end

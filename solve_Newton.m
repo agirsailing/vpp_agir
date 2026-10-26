@@ -44,13 +44,15 @@ while norm(step)>1e-3
     max_step = [1.5; 0.05; deg2rad(2); deg2rad(1); deg2rad(1)]; % Limit the step
     step = sign(step) .* min(abs(step),max_step);
     X    = X - step;                        % Next iteration x
+   
     % SUGGEST SOLVER LOOP END HERE
 end
 
-% Final check: the residuals themselves must be small, not just the step
-if FLAG == 0
+% Final check: only compute if previous steps produced valid numbers
+if FLAG == 0 && all(isfinite(X))
     Rf = calc_residuals_Newton(X,env,moth,TW,TWS,TWA);
     if any(abs(Rf(1:4)) > 5) || abs(Rf(5)) > 1e-3
         FLAG = 3;
     end
+    
 end

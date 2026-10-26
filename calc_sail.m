@@ -49,12 +49,15 @@ awa_eff = atan( (tan(awa)*cos(phi) - sin(theta)*sin(phi)) / cos(theta) );
 V_eff   = aws * sqrt( (sin(awa)*cos(phi) - cos(awa)*sin(phi)*sin(theta))^2 ...
                      + cos(awa)^2 * cos(theta)^2 );
 
+
 %% 3) Angle of attack and aero coefficients (evaluated with the EFFECTIVE wind)
 alpha    = awa_eff - tw/2;             % crude mean-station AoA, see notes above
 alfa_vec = alpha;
 
 rho_air = env.air.rho;                 % [kg/m^3]
 q_eff   = 0.5 * rho_air * V_eff^2;     % [Pa]
+
+%% 3) Angle of attack and aero coefficients
 
 A = moth.S_sail;                       % [m^2]
 if isnan(moth.b_sail)

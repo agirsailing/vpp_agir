@@ -18,6 +18,7 @@ global DATA % A test-variable for Razola & Kuttenkeuler only :-)
 % Load parameters for the moth and environment
 env = get_env_params();
 moth = get_boat_params();
+
 disp(moth.r_cg')
 assert(all(isfinite(moth.r_cg)),'r_cg contains NaN');
 
@@ -52,36 +53,42 @@ TW_sail = deg2rad(10); % [rad] Assumed sail twist
 %--------------------------------------------------------------------------
 H = -0.5; % [m] Constant flying height
 
-% Define vectors for the required homework span
-TWS_vec = [5,10];      % [m/s] True wind speeds
-TWA_vec = 45:5:155;         % [deg] True wind angles (10-degree steps)
+
+
+% Define vectors for the required span
+TWS_vec = 2:1:10;      % [m/s] True wind speeds
+TWA_vec = 30:5:175;         % [deg] True wind angles (10-degree steps)
+
 
 nTWS = length(TWS_vec);
 nTWA = length(TWA_vec);
 
 % Pre-allocate results matrices
-VS_res = zeros(nTWS, nTWA);
-TW_res = zeros(nTWS, nTWA);
+VS_res     = zeros(nTWS, nTWA);   % surge speed [m/s]
+TW_res  = zeros(nTWS, nTWA);   % heave [m]
+
 
 % Run the sweeps
 for i = 1:nTWS
     TWS = TWS_vec(i);
     fprintf('\n====================================\n');
     fprintf('Starting Wind Speed: %d m/s\n', TWS);
-    
+
+
     % Initial guess for 20 degrees (using 1.2x TWS because 20 degrees is very tight/slow)
     % 5-DOF initial guess: [VS; heave; heel; pitch; leeway]
     X0 = [TWS * 1.3; moth.depth_foil_flying; deg2rad(0); deg2rad(1.0); deg2rad(3.0)];
-        
+
+
     for j = 1:nTWA
         TWA_deg = TWA_vec(j);
-        TWA_rad = deg2rad(TWA_deg); 
-        
+        TWA_rad = deg2rad(TWA_deg);
+
         fprintf('  TWA %3d deg... ', TWA_deg);
-        
+
         % Call the 5FOF Newton solver
         [X, iter, FLAG] = solve_Newton(X0,env,moth,TW_sail,TWS,TWA_rad);
-        
+
         VS = X(1);
 
         % Safety Check: Did the point fail, stall, or hit the 50 iteration limit?
@@ -92,26 +99,27 @@ for i = 1:nTWS
         else
             fprintf('Success! VS = %5.2f m/s (iters: %d)\n', VS, iter);
             VS_res(i,j) = VS;
-            
+
             % Update guess for the next angle (Sequential Updating)
             X0 = X;
         end
     end
 end
 
+%%
+
 %--------------------------------------------------------------------------
 % Plot the Final Results as a Polar Plot
 %--------------------------------------------------------------------------
-%%
 figure;
 
 % polarplot requires the angle array to be in radians
 TWA_plot_rad = deg2rad(TWA_vec);
 
-polarplot(TWA_plot_rad, VS_res(1,:), 'b-o', 'LineWidth', 1.5, 'DisplayName', "TWS ="+num2str(TWS_vec(1))+" m/s"); 
+polarplot(TWA_plot_rad, VS_res(1,:), 'b-o', 'LineWidth', 1.5, 'DisplayName', 'TWS = 10 m/s'); 
 hold on;
-polarplot(TWA_plot_rad, VS_res(2,:), 'r-o', 'LineWidth', 1.5, 'DisplayName', "TWS ="+num2str(TWS_vec(2))+" m/s");
-%polarplot(TWA_plot_rad, VS_res(3,:), 'g-o', 'LineWidth', 1.5, 'DisplayName', 'TWS = 20 m/s');
+polarplot(TWA_plot_rad, VS_res(2,:), 'r-o', 'LineWidth', 1.5, 'DisplayName', 'TWS = 15 m/s');
+polarplot(TWA_plot_rad, VS_res(3,:), 'g-o', 'LineWidth', 1.5, 'DisplayName', 'TWS = 20 m/s');
 
 % Customize the polar axes to match sailing conventions
 pax = gca;
