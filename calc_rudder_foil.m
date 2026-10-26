@@ -31,8 +31,6 @@ function [diff_residuals,FH, Moments ,CPx,CPy,CPz,alfa_vec] = ...
 if nargin<11;plotflag = false;end    % To make this argument optional
 if nargin<12;Target_Loads = [0;0;0;0;0;0];end % To make this argument optional
 
-thisDir = fileparts(which('calc_foil'));
-addpath(genpath(fullfile(thisDir, 'Helper_functions')));
     
 % For clarity
 q        = 0.5*env.water.rho*surge^2;  % [N/m2] Dynamic pressure 
@@ -118,34 +116,34 @@ a_cd = [Re_table.alpha,Re_table.CD];
 
 FH=[0,0,0]';
 % test for interpolation in data table instead of empirical formulas
-% for ipanel=1:npanels
-%     alfa_deg = alfa_vec(ipanel) * (180/pi);
-%     Cl   = interp1(a_cl(:,1),a_cl(:,2),alfa_deg,'linear','extrap');    % [-] 2D-lift interpolated from xfoil data.
-%     Cd   = interp1(a_cd(:,1),a_cd(:,2),alfa_deg,"linear","extrap");    % [-] 2D-drag interpolated from xfoil data.
-%     CL   = Cl/(1+2/(e*AR));             % [-] 3D lift-correction.
-%     L    = q*CL*A_vec(ipanel);          % [N] Total panel lift (in the yz-plane).
-%     CDi  = CL^2/(pi*e*AR);              % [-] Induced drag coeff.
-%     D    = q*A_vec(ipanel)*(Cd+CDi);    % [N] Total drag.
-%     Ni   = Ni_vec(:,ipanel);            % [-] Panel normal.
-%     niyz = [0;Ni(2);Ni(3)];niyz = niyz/norm(niyz); % Unit panel normal projection on the yz-plane.
-%     FHi  = niyz*L +[-D;0;0];            % Panel force vector.
-%     FH_panels(:,ipanel)  = FHi;         % Array of panel forces.
-% end
-
-
 for ipanel=1:npanels
-  Cl_a = 2*pi;                        % [-] 2D Lift derivative for ?NACA0012.   
-  Cl   = Cl_a*alfa_vec(ipanel);       % [-] 2D lift.
-  Cd   = 0.008 + 0.01*Cl^2;           % [-] 2D-drag for ?NACA0012.
-  CL   = Cl/(1+2/(e*AR));             % [-] 3D lift-correction.
-  L    = q*CL*A_vec(ipanel);          % [N] Total panel lift (in the yz-plane).
-  CDi  = CL^2/(pi*e*AR);              % [-] Induced drag coeff.
-  D    = q*A_vec(ipanel)*(Cd+CDi);    % [N] Total drag.
-  Ni   = Ni_vec(:,ipanel);            % [-] Panel normal.
-  niyz = [0;Ni(2);Ni(3)];niyz = niyz/norm(niyz); % Unit panel normal projection on the yz-plane. 
-  FHi  = niyz*L +[-D;0;0];            % Panel force vector.
-  FH_panels(:,ipanel)  = FHi;         % Array of panel forces.
+    alfa_deg = alfa_vec(ipanel) * (180/pi);
+    Cl   = interp1(a_cl(:,1),a_cl(:,2),alfa_deg,'linear','extrap');    % [-] 2D-lift interpolated from xfoil data.
+    Cd   = interp1(a_cd(:,1),a_cd(:,2),alfa_deg,"linear","extrap");    % [-] 2D-drag interpolated from xfoil data.
+    CL   = Cl/(1+2/(e*AR));             % [-] 3D lift-correction.
+    L    = q*CL*A_vec(ipanel);          % [N] Total panel lift (in the yz-plane).
+    CDi  = CL^2/(pi*e*AR);              % [-] Induced drag coeff.
+    D    = q*A_vec(ipanel)*(Cd+CDi);    % [N] Total drag.
+    Ni   = Ni_vec(:,ipanel);            % [-] Panel normal.
+    niyz = [0;Ni(2);Ni(3)];niyz = niyz/norm(niyz); % Unit panel normal projection on the yz-plane.
+    FHi  = niyz*L +[-D;0;0];            % Panel force vector.
+    FH_panels(:,ipanel)  = FHi;         % Array of panel forces.
 end
+
+
+% for ipanel=1:npanels
+%   Cl_a = 2*pi;                        % [-] 2D Lift derivative for ?NACA0012.   
+%   Cl   = Cl_a*alfa_vec(ipanel);       % [-] 2D lift.
+%   Cd   = 0.008 + 0.01*Cl^2;           % [-] 2D-drag for ?NACA0012.
+%   CL   = Cl/(1+2/(e*AR));             % [-] 3D lift-correction.
+%   L    = q*CL*A_vec(ipanel);          % [N] Total panel lift (in the yz-plane).
+%   CDi  = CL^2/(pi*e*AR);              % [-] Induced drag coeff.
+%   D    = q*A_vec(ipanel)*(Cd+CDi);    % [N] Total drag.
+%   Ni   = Ni_vec(:,ipanel);            % [-] Panel normal.
+%   niyz = [0;Ni(2);Ni(3)];niyz = niyz/norm(niyz); % Unit panel normal projection on the yz-plane. 
+%   FHi  = niyz*L +[-D;0;0];            % Panel force vector.
+%   FH_panels(:,ipanel)  = FHi;         % Array of panel forces.
+% end
 
 
 % Now sum upp each panels contribution into FH.

@@ -103,7 +103,7 @@ function moth = get_boat_params()
 
     %%  Derived 
     % Crew lateral position: sitting on the port (windward) wing edge
-    moth.y_crew = -moth.y_wing_edge;                                % [m]
+    moth.y_crew = -moth.y_wing_edge+0.5;                                % [m]
 
     % Combined CG (boat + sailor) = reference point for ALL moments
     moth.x_cg = (moth.m_boat*moth.x_boat_cg + moth.m_sailor*moth.x_crew)/moth.m_tot;  % [m]
