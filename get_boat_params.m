@@ -12,6 +12,7 @@ function moth = get_boat_params()
 
     moth.x_crew      = 1.500;       % [m] sailor position (fixed LCG)
     moth.z_crew      = -0.6;         % [m] sailor CG height (above deck = negative)
+
     
     %% Center of gravity (boat only)
     moth.x_boat_cg   = 1.770;       % [m]
@@ -90,7 +91,11 @@ function moth = get_boat_params()
     moth.z_CE_sail   = -2.317;      % [m] sail CE, negative = above hull
     moth.CLmax_sail  = 1.5;         % [-] 
     moth.k_sail      = 1.05;        % [-] sail form factor (1+k)
-    
+    moth.alpha_sail_max = deg2rad(14);  % [rad] max sail AoA (stall onset / trim limit), TUNE
+    moth.heel_target    = deg2rad(-7);   % [rad] heel the sailor accepts, TUNE
+
+
+
     %% Wings
     moth.numberOfWingbars = 2;       % [-]  
     moth.wingbarSpan_m    = 2.18712; % [m] from the CAD, tip to tip
@@ -103,7 +108,9 @@ function moth = get_boat_params()
 
     %%  Derived 
     % Crew lateral position: sitting on the port (windward) wing edge
-    moth.y_crew = -moth.y_wing_edge+0.5;                                % [m]
+    moth.y_crew_foiling = -moth.y_wing_edge + 0.5;  % [m] Hiked out to windward on wing
+    moth.y_crew_disp    = 0.0;                      % [m] Centered on hull centerline in light winds
+    moth.y_crew         = moth.y_crew_foiling;      % Default fallback
 
     % Combined CG (boat + sailor) = reference point for ALL moments
     moth.x_cg = (moth.m_boat*moth.x_boat_cg + moth.m_sailor*moth.x_crew)/moth.m_tot;  % [m]
@@ -119,6 +126,10 @@ function moth = get_boat_params()
     moth.f2_c_mean   = moth.f2_S/moth.f2_span;                      % [m]
     moth.h_fly       = moth.mv_span - moth.depth_foil_flying;       % [m] hull clearance when foiling
 
+    %% Heel targets
+    moth.heel_target_foiling = deg2rad(-7);         % [rad] Windward heel when foiling
+    moth.heel_target_disp    = deg2rad(0);          % [rad] Upright when displacement sailing
+    moth.heel_target         = moth.heel_target_foiling;
 end
 
 function S = foil_area(planform, span, c_root, c_tip)

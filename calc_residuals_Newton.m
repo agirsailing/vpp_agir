@@ -1,4 +1,4 @@
-function [residuals,FM] = calc_residuals_Newton(state, env, moth, TW, TWS, TWA)
+function [residuals,FM] = calc_residuals_Newton(state, env, moth, TWS, TWA)
 
 % Unpack the 5-DOF state vector requested by the solver
 VS     = state(1); % Surge (Forward boat speed)
@@ -6,6 +6,7 @@ heave  = state(2); % Vertical displacement
 heel   = state(3); % Roll angle
 pitch  = state(4); % Trim angle
 leeway = state(5); % Drift angle
+alpha_sail = state(6);   % [rad] sail angle of attack
 
 H_hull = moth.mv_span - heave; % Negative when hull is immersed
 
@@ -20,7 +21,7 @@ R_boat2earth = R_pitch * R_heel;
 TWA_eff = TWA - leeway;
 
 % Calculate aerodynamic force components vector FA and Center of Effort
-[FA, CEA, alfa_sail] = calc_sail(moth, env, TW, VS, TWS, TWA_eff, heel, pitch);
+[FA, CEA, alfa_sail] = calc_sail(moth, env, alpha_sail, VS, TWS, TWA_eff, heel, pitch);
 
 % Divide into force vectors 
 FAX = FA(1);
@@ -98,9 +99,32 @@ M_pitch = M_sail(2) + hull_pitch_mom + M_main(2) + M_rudder(2);
 % Kinematic leeway match 
 F_sway  = leeway - out_main.leeway;
 
+%--------------------------------------------------------------------------
+% Sail trim residual
+%--------------------------------------------------------------------------
+if H_hull < 0
+    % DISPLACEMENT MODE (Hull immersed):
+    % Sailor sits centered and keeps the sail sheeted to max AoA for maximum drive.
+    R_trim = alpha_sail - moth.alpha_sail_max;
+
+else
+    % FOILING MODE (Hull flying clear):
+    % Fischer-Burmeister complementarity between max AoA and windward heel limit.
+    % a >= 0: margin to max AoA
+    % b >= 0: margin to target windward heel (heel is negative to windward)
+    a = moth.alpha_sail_max - alpha_sail;
+    b = moth.heel_target - heel;             
+
+    R_trim = sqrt(a^2 + b^2 + 1e-10) - a - b;
+end
+
+if isfield(moth,'alpha_pin')
+    R_trim = alpha_sail - moth.alpha_pin; 
+end
 
 % Output array for the Newton solver
-residuals = [F_surge; F_heave; M_heel; M_pitch; F_sway];
+residuals = [F_surge; F_heave; M_heel; M_pitch; F_sway; R_trim];
+
 
 
 % if nargout > 1

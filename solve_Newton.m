@@ -1,56 +1,56 @@
-function [X,iter,FLAG,FM] = solve_Newton(X0,env,moth,TW, TWS, TWA)
-global DATA;
+function [X,iter,FLAG,FM] = solve_Newton(X0,env,moth,TWS,TWA)
+% FLAG: 0 ok, 1 max iterations, 2 NaN/Inf, 4 no step reduces the residuals
 
-%---------------------------------------------------
-% VPP solver unit that solves for VS & TW
-%
-%
-%---------------------------------------------------
-step  = ones(5,1)*999;  % Starting values for step vector [VS;TW]
-iter  = 0;        % Count iterations
-FLAG  = 0;        % Warning flag for maximum iterations
-dX =  [1e-4;1e-4;1e-4;1e-4;1e-4]; % Step size for each DOF
+iter = 0;
+FLAG = 0;
+dX   = 1e-4*ones(6,1);
+tolR = [5; 5; 5; 10; 1e-3; 1e-3];    % surge N, heave N, heel Nm, pitch Nm, sway rad, trim
+max_step = [0.3; 0.02; deg2rad(1); deg2rad(0.5); deg2rad(0.5); deg2rad(1)];
 
-X = X0; % The initial guess
-% SUGGEST SOLVER LOOP START HERE..
-while norm(step)>1e-3
+X = X0;
+[R,~] = calc_residuals_Newton(X, env, moth, TWS, TWA);
+if any(~isfinite(R)), FLAG = 2; end
 
-    %-------- KEEP THESE LINES COMMENTED IN EXERCISE 1
-    % Count and check number if iterations
-    iter = iter+1;          % Count iterations
-    if iter>50; FLAG=1; break; end  % Limit for maximum number of iterations
-    %-------- KEEP THESE LINES COMMENTED IN EXERCISE 1
+while FLAG == 0
+    if all(abs(R) < tolR), break; end          % converged
+    iter = iter + 1;
+    if iter > 150, FLAG = 1; break; end
 
-    % Calculate 5-DOF residuals vector (5x1)
-    [R,~] = calc_residuals_Newton(X,env, moth,TW, TWS, TWA);
-    
-    if any(~isfinite(R)), FLAG = 2; break; end
-
-    %fprintf('%2d X=%s  R=%s\n', iter, mat2str(X',4), mat2str(R',3));
-    
-    % Calculation of derivatives using a finite difference method
-    J = zeros(5,5);
-    for k = 1:5
-        X_pert = X ;
+    % Finite-difference Jacobian
+    J = zeros(6,6);
+    for k = 1:6
+        X_pert = X;
         X_pert(k) = X_pert(k) + dX(k);
-        [R_pert,~] = calc_residuals_Newton(X_pert, env, moth, TW, TWS, TWA);
+        [R_pert,~] = calc_residuals_Newton(X_pert, env, moth, TWS, TWA);
         J(:,k) = (R_pert - R) / dX(k);
     end
+    if any(~isfinite(J(:))), FLAG = 2; break; end
 
-    if any(~isfinite(J(:))), FLAG = 2; break; end 
+    % Newton step, scaled as a whole so no component exceeds its limit
+    step = J \ R;
+    s = min(1, min(max_step ./ max(abs(step), eps)));
+    step = s*step;
 
-    % Newton calculation and limiting
-    step =    J \ R;   % Newton step
-    max_step = [1.5; 0.05; deg2rad(2); deg2rad(1); deg2rad(1)]; % Limit the step
-    step = sign(step) .* min(abs(step),max_step);
-    X    = X - step;                        % Next iteration x
-    % SUGGEST SOLVER LOOP END HERE
+    % Backtracking: halve the step until the scaled residual norm decreases
+    f0 = norm(R ./ tolR);
+    t = 1; accepted = false;
+    for m = 1:8
+        Xn = X - t*step;
+      % Ensure state stays in physical limits during line search
+        Xn(1) = max(Xn(1), 0.5);                                    % Speed >= 0.5 m/s
+        Xn(2) = min(Xn(2), moth.mv_span + 0.155);                   % Hull immersion depth limit
+        Xn(6) = min(max(Xn(6), deg2rad(0.5)), moth.alpha_sail_max); % Sail AoA between 0.5 deg and max AoA
+        [Rn,~] = calc_residuals_Newton(Xn, env, moth, TWS, TWA);
+        if all(isfinite(Rn)) && norm(Rn ./ tolR) < f0
+            accepted = true; break;
+        end
+        t = t/2;
+    end
+    if ~accepted, FLAG = 4; break; end
+
+    X = Xn; R = Rn;
+    % fprintf('%3d  f=%.3g  X=%s\n', iter, norm(R./tolR), mat2str(X',3));  % uncomment to debug
 end
 
-% Final check: the residuals themselves must be small, not just the step
-[Rf,FM] = calc_residuals_Newton(X,env,moth,TW,TWS,TWA);
-if FLAG == 0
-    if any(abs(Rf(1:4)) > 5) || abs(Rf(5)) > 1e-3
-        FLAG = 3;
-    end
+[~,FM] = calc_residuals_Newton(X, env, moth, TWS, TWA);
 end

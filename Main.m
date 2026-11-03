@@ -29,7 +29,7 @@ moth.main_flap_ang = 0.0; % [rad] Flap angle on horizontal main foil
 moth.wand_gain = 0.8;    % [rad/m] "Gearing": Flap sensitivity to heave
 
 moth.rudder_rake   = deg2rad(0.0); % [rad] Rudder rake angle
-TW_sail = deg2rad(10); % [rad] Assumed sail twist
+
 
 takeoff_speed = 5; %[m/s]
 %--------------------------------------------------------------------------    
@@ -57,6 +57,10 @@ H = -0.5; % [m] Constant flying height
 TWS_vec = [1,2,3,4,5,6,7,8];      % [m/s] True wind speeds
 TWA_vec = 40:5:155;         % [deg] True wind angles (10-degree steps)
 
+TWS_vec = 9;
+% TWS_vec = [6];
+% TWA_vec = 90:-5:40;
+
 nTWS = length(TWS_vec);
 nTWA = length(TWA_vec);
 
@@ -66,6 +70,7 @@ heave_res  = NaN(nTWS, nTWA);   % heave [m]
 heel_res   = NaN(nTWS, nTWA);   % heel [deg]
 pitch_res  = NaN(nTWS, nTWA);   % pitch [deg]
 leeway_res = NaN(nTWS, nTWA);   % leeway [deg]
+alpha_res  = NaN(nTWS, nTWA);   % sail angle
 
 % Surge forces [N]
 surge_sail_res    = NaN(nTWS, nTWA);
@@ -99,21 +104,37 @@ for i = 1:nTWS
     fprintf('Starting Wind Speed: %d m/s\n', TWS);
 
     if TWS < takeoff_speed
-        % Displacement mode: hull immersed (~10-15 cm draught)
-        heave_0 = moth.mv_span + 0.12; % ~1.12 m
+        % --- DISPLACEMENT MODE SETUP ---
+        moth.heel_target = moth.heel_target_disp;    % Aim for 0 deg heel
+        moth.y_crew      = moth.y_crew_disp;         % Sailor sits centered
+
+        % Recompute combined CG for displacement mode
+        moth.y_cg = (moth.m_boat*moth.y_boat_cg + moth.m_sailor*moth.y_crew) / moth.m_tot;
+        moth.r_cg = [moth.x_cg; moth.y_cg; moth.z_cg];
+
+        heave_0 = moth.mv_span + 0.12;               % Hull in water (~1.12 m)
         VS_0    = TWS * 0.8;
+        % State: [VS; heave; heel; pitch; leeway; alpha_sail]
+        X0 = [VS_0; heave_0; deg2rad(0); deg2rad(1.0); deg2rad(-3.0); moth.alpha_sail_max];
+
     else
-        % Foiling mode: main foil flying near target depth
-        heave_0 = moth.depth_foil_flying; % 0.18 m
-        VS_0    = TWS * 1.5;
+        % --- FOILING MODE SETUP ---
+        moth.heel_target = moth.heel_target_foiling; % Aim for -7 deg windward heel
+        moth.y_crew      = moth.y_crew_foiling;      % Sailor hikes on windward wing
+
+        % Recompute combined CG for foiling mode
+        moth.y_cg = (moth.m_boat*moth.y_boat_cg + moth.m_sailor*moth.y_crew) / moth.m_tot;
+        moth.r_cg = [moth.x_cg; moth.y_cg; moth.z_cg];
+
+        heave_0 = moth.depth_foil_flying;            % Main foil flying (~0.18 m)
+        VS_0    = max(TWS * 1.5, 7.0);
+        % State: [VS; heave; heel; pitch; leeway; alpha_sail]
+        X0 = [VS_0; heave_0; deg2rad(-7); deg2rad(0.05); deg2rad(-0.5); deg2rad(8)];
     end
-
-    X0 = [VS_0; heave_0; deg2rad(0); deg2rad(1.0); deg2rad(-3.0)];
-
     % % 5-DOF initial guess: [VS; heave; heel; pitch; leeway]
     % X0 = [TWS * 1.3; 0.88; deg2rad(0); deg2rad(1.0); deg2rad(-3.0)];
-    % 
-    % 
+    %
+    %
     for j = 1:nTWA
         TWA_deg = TWA_vec(j);
         TWA_rad = deg2rad(TWA_deg); 
@@ -121,9 +142,7 @@ for i = 1:nTWS
         fprintf('  TWA %3d deg... ', TWA_deg);
         
         % Call the 5FOF Newton solver
-        [X, iter, FLAG, FM] = solve_Newton(X0,env,moth,TW_sail,TWS,TWA_rad);
-        disp(" ")
-        disp(FM)
+        [X, iter, FLAG, FM] = solve_Newton(X0,env,moth,TWS,TWA_rad);
         VS = X(1);
         heave = X(2);
         heel = rad2deg(X(3));
@@ -132,13 +151,14 @@ for i = 1:nTWS
 
         % Safety Check: Did the point fail, stall, or hit the 50 iteration limit?
         if FLAG ~= 0 || isnan(VS) || VS < 1 || (moth.mv_span - X(2)) < -0.16
-            fprintf('Stalled/Failed. Resetting.\n');
+            fprintf('Stalled/Failed (FLAG %d). Resetting.\n', FLAG);
             disp("Surge="+num2str(VS)+"m/s, Heave="+num2str(heave)+"m, Heel="+num2str(heel)+"deg, Pitch="+num2str(pitch)+"deg, leeway="+num2str(leeway)+"deg.")
             VS_res(i,j) = NaN; % Record as 0 to indicate it cannot foil here
             heave_res(i,j)  = NaN;
             heel_res(i,j)   = NaN;
             pitch_res(i,j)  = NaN;
             leeway_res(i,j) = NaN;
+            alpha_res(i,j)  = NaN;
 
 
         else
@@ -149,6 +169,7 @@ for i = 1:nTWS
             heel_res(i,j)   = heel;
             pitch_res(i,j)  = pitch;
             leeway_res(i,j) = leeway;
+            alpha_res(i,j) = rad2deg(X(6));
 
             % Surge components
             surge_sail_res(i,j)   = FM.surge_sail;
@@ -217,7 +238,7 @@ title("Velocity Prediction Polar, Take off speed "+num2str(takeoff_speed)+" m/s"
 legend('Location', 'best');
 %%
 figure;
-subplot(5,1,1)
+subplot(6,1,1)
 hold on
 grid on
 grid minor
@@ -225,33 +246,40 @@ plot(TWA_vec,VS_res)
 ylabel("speed [m/s]")
 legend(string(TWS_vec))
 
-subplot(5,1,2)
+subplot(6,1,2)
 hold on
 grid on
 grid minor
 plot(TWA_vec,heave_res)
 ylabel("heave [m]")
 
-subplot(5,1,3)
+subplot(6,1,3)
 hold on
 grid on
 grid minor
 plot(TWA_vec,heel_res)
 ylabel("heel [deg]")
 
-subplot(5,1,4)
+subplot(6,1,4)
 hold on
 grid on
 grid minor
 plot(TWA_vec,pitch_res)
 ylabel("pitch [deg]")
 
-subplot(5,1,5)
+subplot(6,1,5)
 hold on
 grid on
 grid minor
 plot(TWA_vec,leeway_res)
 ylabel("leeway [deg]")
+
+
+subplot(6,1,6);
+hold on; 
+grid on; 
+plot(TWA_vec, alpha_res); 
+ylabel("sail AoA [deg]");
 xlabel("TWA [deg]")
 
 %--------------------------------------------------------------------------

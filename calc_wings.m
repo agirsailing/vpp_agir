@@ -51,7 +51,7 @@ function [Fbody_N, out] = wings(VairRelBoat_body_mps, moth, env)
     drag_N = q_Pa .* CD .* projectedArea_m2;
 
     % Aerodynamic force vector.
-    Fbody_N = flowDirection .* drag_N;
+    Fbody_N = (flowDirection .* drag_N);
 
     % Additional outputs.
     out.speed_mps = speed_mps;

@@ -201,6 +201,7 @@ if plotflag;
  fprintf('Min angle of attack %.1f deg \n',min(alfa_vec)*180/pi);
 end
 
+
 % 
 % fprintf('Surge  = %.2f m/s\n', surge);
 % fprintf('Heave  = %.2f m\n', heave);

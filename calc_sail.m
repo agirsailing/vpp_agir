@@ -1,4 +1,4 @@
-function [FA, CEA, alfa_vec] = calc_sail(moth, env, tw, VS, tws, twa, phi, theta)
+   function [FA, CEA, alfa_vec, trim] = calc_sail(moth, env, alpha_sail, VS, tws, twa, phi, theta)
 % CALC_SAIL  Aerodynamic sail force in the boat reference frame.
 %
 %   [FA, CEA, alfa_vec] = calc_sail(moth, env, tw, VS, tws, twa, phi, theta)
@@ -6,7 +6,7 @@ function [FA, CEA, alfa_vec] = calc_sail(moth, env, tw, VS, tws, twa, phi, theta
 % INPUTS
 %   moth  [struct] boat/rig geometry, from get_boat_params()
 %   env   [struct] environment (air density, wind), from get_env_params()
-%   tw    [rad]    total sail twist, root-to-tip
+%   alpha_sail    [rad]    sail angle
 %   VS    [m/s]    boat speed
 %   tws   [m/s]    true wind speed
 %   twa   [rad]    true wind angle (0 = dead upwind)
@@ -52,9 +52,11 @@ num = sin(awa)*cos(phi) - cos(awa)*sin(phi)*sin(theta);
 den = cos(awa)*cos(theta);
 awa_eff = atan2(num, den);
 V_eff   = aws*hypot(num, den);
+
 %% 3) Angle of attack and aero coefficients (evaluated with the EFFECTIVE wind)
-alpha    = awa_eff - tw/2;             % crude mean-station AoA, see notes above
+alpha    = alpha_sail;          % same AoA over the whole sail
 alfa_vec = alpha;
+trim     = awa_eff - alpha;     % [rad] implied boom angle
 
 rho_air = env.air.rho;                 % [kg/m^3]
 q_eff   = 0.5 * rho_air * V_eff^2;     % [Pa]
