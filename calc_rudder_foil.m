@@ -107,19 +107,24 @@ Re = surge*moth.f2_c_root/env.water.nu; % reynolds number
 % Now, most of the geometric pre-calculations are done... puhh
 
 foil_data = moth.r_foildata;
-% extract data corresponding to the closest Re from table
-Re_table = extract_data_foil(foil_data,Re);
+% Interpolate between the two neighbouring Re tables instead of picking the nearest
+Rs = unique(foil_data.Re);
+Rc = min(max(Re, Rs(1)), Rs(end));
+ii = find(Rs <= Rc, 1, 'last');
+if ii == numel(Rs), ii = ii - 1; end
+w  = (Rc - Rs(ii)) / (Rs(ii+1) - Rs(ii));       % 0..1 weight of the upper table
+t1 = foil_data(foil_data.Re == Rs(ii),   :);
+t2 = foil_data(foil_data.Re == Rs(ii+1), :);
 
-% make alpha cl and alpha cd array 
-a_cl = [Re_table.alpha,Re_table.CL];
-a_cd = [Re_table.alpha,Re_table.CD];
 
 FH=[0,0,0]';
 % test for interpolation in data table instead of empirical formulas
 for ipanel=1:npanels
     alfa_deg = alfa_vec(ipanel) * (180/pi);
-    Cl   = interp1(a_cl(:,1),a_cl(:,2),alfa_deg,'linear','extrap');    % [-] 2D-lift interpolated from xfoil data.
-    Cd   = interp1(a_cd(:,1),a_cd(:,2),alfa_deg,"linear","extrap");    % [-] 2D-drag interpolated from xfoil data.
+    Cl = (1-w)*interp1(t1.alpha, t1.CL, alfa_deg, 'linear', 'extrap') ...
+        +    w *interp1(t2.alpha, t2.CL, alfa_deg, 'linear', 'extrap');
+    Cd = (1-w)*interp1(t1.alpha, t1.CD, alfa_deg, 'linear', 'extrap') ...
+        +    w *interp1(t2.alpha, t2.CD, alfa_deg, 'linear', 'extrap');
     CL   = Cl/(1+2/(e*AR));             % [-] 3D lift-correction.
     L    = q*CL*A_vec(ipanel);          % [N] Total panel lift (in the yz-plane).
     CDi  = CL^2/(pi*e*AR);              % [-] Induced drag coeff.
