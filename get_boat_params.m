@@ -11,8 +11,8 @@ function moth = get_boat_params()
     moth.m_tot       = moth.m_boat+moth.m_sailor;
 
     moth.x_crew      = 1.500;       % [m] sailor position (fixed LCG)
-    moth.z_crew      = -0.6;         % [m] sailor CG height (above deck = negative)
-
+    moth.z_crew      = -0.6;        % [m] sailor CG height (above deck = negative)
+    moth.y_crew_mid  = 0.0;         % [m] sailor on the centreline (s=0)
     
     %% Center of gravity (boat only)
     moth.x_boat_cg   = 1.770;       % [m]
@@ -92,7 +92,8 @@ function moth = get_boat_params()
     moth.z_CE_sail   = -2.317;      % [m] sail CE, negative = above hull
     moth.CLmax_sail  = 1.5;         % [-] 
     moth.k_sail      = 1.05;        % [-] sail form factor (1+k)
-    moth.alpha_sail_max = deg2rad(14);  % [rad] max sail AoA (stall onset / trim limit), TUNE
+    moth.alpha_sail_max = deg2rad(20);  % [rad] max sail AoA (stall onset / trim limit), TUNE
+    moth.alpha_sail_min = deg2rad(0.5); % [rad] fully depowered
     moth.heel_target    = deg2rad(-7);   % [rad] heel the sailor accepts, TUNE
 
 
