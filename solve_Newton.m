@@ -5,7 +5,7 @@ iter = 0;
 FLAG = 0;
 dX   = 1e-4*ones(6,1);
 tolR = [5; 5; 5; 10; 1e-3; 1e-3];    % surge N, heave N, heel Nm, pitch Nm, sway rad, trim
-max_step = [0.3; 0.02; deg2rad(1); deg2rad(0.5); deg2rad(0.5); deg2rad(1)];
+max_step = [0.3; 0.02; 0.2; 0.2; deg2rad(0.5); deg2rad(1)];
 
 X = X0;
 [R,~] = calc_residuals_Newton(X, env, moth, TWS, TWA);
@@ -37,9 +37,11 @@ while FLAG == 0
     for m = 1:8
         Xn = X - t*step;
       % Ensure state stays in physical limits during line search
-        Xn(1) = max(Xn(1), 0.5);                                    % Speed >= 0.5 m/s
+        Xn(1) = max(Xn(1), 0.5);                                    % Speed >= 0.5 m/
         Xn(2) = min(Xn(2), moth.mv_span + 0.155);                   % Hull immersion depth limit
-        Xn(6) = min(max(Xn(6), deg2rad(0.5)), moth.alpha_sail_max); % Sail AoA between 0.5 deg and max AoA
+        Xn(3) = min(max(Xn(3), -moth.y_wing_edge), 0);          % Bound y_crew between max hike and leeward side
+        Xn(4) = min(max(Xn(4), moth.wing_x_pos), moth.wing_length+moth.wing_x_pos);
+        Xn(6) = min(max(Xn(6), deg2rad(0.5)), moth.alpha_sail_max); % Sail AoA limits
         [Rn,~] = calc_residuals_Newton(Xn, env, moth, TWS, TWA);
         if all(isfinite(Rn)) && norm(Rn ./ tolR) < f0
             accepted = true; break;

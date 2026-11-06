@@ -18,7 +18,8 @@ function moth = get_boat_params()
     moth.x_boat_cg   = 1.770;       % [m]
     moth.y_boat_cg   = 0.00;        % [m]
     moth.z_boat_cg = -0.30;         % [m] vertical CG (above deck)
-       
+
+ 
     %%  Hull 
     moth.L_wl        = 3.325;          % [m] waterline length 
     moth.T_hull      = NaN;            % [m] canoe body draught at full displacement
@@ -101,10 +102,12 @@ function moth = get_boat_params()
     moth.wingbarSpan_m    = 2.18712; % [m] from the CAD, tip to tip
     moth.wingbarDepth_m   = 0.050;   % [m] from the CAD
 
-    moth.S_wings_m2  = moth.numberOfWingbars*...
-        moth.wingbarSpan_m*moth.wingbarDepth_m;
+    moth.S_wings_m2  = moth.numberOfWingbars* moth.wingbarSpan_m*moth.wingbarDepth_m;
     moth.y_wing_edge = moth.wingbarSpan_m/2; % [m] wing edge from centreline
     moth.wings_CD    = 1.20;
+
+    moth.wing_length = 1.05; % [m] x distance of wingbars
+    moth.wing_x_pos  = 0.75; % [m] distance from wingbars to the aft
 
     %%  Derived 
     % Crew lateral position: sitting on the port (windward) wing edge
@@ -126,10 +129,19 @@ function moth = get_boat_params()
     moth.f2_c_mean   = moth.f2_S/moth.f2_span;                      % [m]
     moth.h_fly       = moth.mv_span - moth.depth_foil_flying;       % [m] hull clearance when foiling
 
-    %% Heel targets
-    moth.heel_target_foiling = deg2rad(-7);         % [rad] Windward heel when foiling
+    %% Center of bouyancy
+    
+
+
+    %% Heel and Pitch targets
+    moth.heel_target_foiling = deg2rad(-20);         % [rad] Windward heel when foiling
     moth.heel_target_disp    = deg2rad(0);          % [rad] Upright when displacement sailing
     moth.heel_target         = moth.heel_target_foiling;
+
+    %% pitch targets
+    moth.pitch_target = deg2rad(0); % [rad] Flat hull trim
+
+
 end
 
 function S = foil_area(planform, span, c_root, c_tip)

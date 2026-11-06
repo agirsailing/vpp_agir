@@ -54,10 +54,9 @@ takeoff_speed = 5; %[m/s]
 H = -0.5; % [m] Constant flying height
 
 % Define vectors for the required homework span
-TWS_vec = [1,2,3,4,5,6,7,8];      % [m/s] True wind speeds
-TWA_vec = 40:5:155;         % [deg] True wind angles (10-degree steps)
+TWS_vec = 1:1:8;      % [m/s] True wind speeds
+TWA_vec = 5:5:180;         % [deg] True wind angles (10-degree steps)
 
-TWS_vec = 9;
 % TWS_vec = [6];
 % TWA_vec = 90:-5:40;
 
@@ -71,6 +70,8 @@ heel_res   = NaN(nTWS, nTWA);   % heel [deg]
 pitch_res  = NaN(nTWS, nTWA);   % pitch [deg]
 leeway_res = NaN(nTWS, nTWA);   % leeway [deg]
 alpha_res  = NaN(nTWS, nTWA);   % sail angle
+y_crew_res = NaN(nTWS, nTWA);   % y crew position [m]
+x_crew_res = NaN(nTWS, nTWA);   % x crew position [m]
 
 % Surge forces [N]
 surge_sail_res    = NaN(nTWS, nTWA);
@@ -115,7 +116,7 @@ for i = 1:nTWS
         heave_0 = moth.mv_span + 0.12;               % Hull in water (~1.12 m)
         VS_0    = TWS * 0.8;
         % State: [VS; heave; heel; pitch; leeway; alpha_sail]
-        X0 = [VS_0; heave_0; deg2rad(0); deg2rad(1.0); deg2rad(-3.0); moth.alpha_sail_max];
+        X0 = [VS_0; heave_0; moth.y_crew_disp; 1.5; deg2rad(-3.0); moth.alpha_sail_max];
 
     else
         % --- FOILING MODE SETUP ---
@@ -128,8 +129,8 @@ for i = 1:nTWS
 
         heave_0 = moth.depth_foil_flying;            % Main foil flying (~0.18 m)
         VS_0    = max(TWS * 1.5, 7.0);
-        % State: [VS; heave; heel; pitch; leeway; alpha_sail]
-        X0 = [VS_0; heave_0; deg2rad(-7); deg2rad(0.05); deg2rad(-0.5); deg2rad(8)];
+        % State: [VS; heave; y_crew; x_crew; leeway; alpha_sail]
+        X0 = [VS_0; heave_0; moth.y_crew_foiling; 1.5; deg2rad(-0.5); deg2rad(8)];
     end
     % % 5-DOF initial guess: [VS; heave; heel; pitch; leeway]
     % X0 = [TWS * 1.3; 0.88; deg2rad(0); deg2rad(1.0); deg2rad(-3.0)];
@@ -145,8 +146,10 @@ for i = 1:nTWS
         [X, iter, FLAG, FM] = solve_Newton(X0,env,moth,TWS,TWA_rad);
         VS = X(1);
         heave = X(2);
-        heel = rad2deg(X(3));
-        pitch = rad2deg(X(4));
+        x_crew = X(4);
+        y_crew = X(3);
+        heel = rad2deg(moth.heel_target);
+        pitch = rad2deg(moth.pitch_target);
         leeway = rad2deg(X(5));
 
         % Safety Check: Did the point fail, stall, or hit the 50 iteration limit?
@@ -159,6 +162,8 @@ for i = 1:nTWS
             pitch_res(i,j)  = NaN;
             leeway_res(i,j) = NaN;
             alpha_res(i,j)  = NaN;
+            y_crew_res(i,j) = NaN;
+            x_crew_res(i,j) = NaN;
 
 
         else
@@ -170,6 +175,8 @@ for i = 1:nTWS
             pitch_res(i,j)  = pitch;
             leeway_res(i,j) = leeway;
             alpha_res(i,j) = rad2deg(X(6));
+            y_crew_res(i,j) = y_crew;
+            x_crew_res(i,j) = x_crew;
 
             % Surge components
             surge_sail_res(i,j)   = FM.surge_sail;
@@ -238,7 +245,7 @@ title("Velocity Prediction Polar, Take off speed "+num2str(takeoff_speed)+" m/s"
 legend('Location', 'best');
 %%
 figure;
-subplot(6,1,1)
+subplot(5,2,1)
 hold on
 grid on
 grid minor
@@ -246,28 +253,28 @@ plot(TWA_vec,VS_res)
 ylabel("speed [m/s]")
 legend(string(TWS_vec))
 
-subplot(6,1,2)
+subplot(5,2,2)
 hold on
 grid on
 grid minor
 plot(TWA_vec,heave_res)
 ylabel("heave [m]")
 
-subplot(6,1,3)
+subplot(5,2,3)
 hold on
 grid on
 grid minor
 plot(TWA_vec,heel_res)
 ylabel("heel [deg]")
 
-subplot(6,1,4)
+subplot(5,2,4)
 hold on
 grid on
 grid minor
 plot(TWA_vec,pitch_res)
 ylabel("pitch [deg]")
 
-subplot(6,1,5)
+subplot(5,2,5)
 hold on
 grid on
 grid minor
@@ -275,13 +282,24 @@ plot(TWA_vec,leeway_res)
 ylabel("leeway [deg]")
 
 
-subplot(6,1,6);
+subplot(5,2,6);
 hold on; 
 grid on; 
 plot(TWA_vec, alpha_res); 
 ylabel("sail AoA [deg]");
+
+subplot(5,2,7)
+hold on; grid on; grid minor;
+plot(TWA_vec, y_crew_res); 
+ylabel("y_crew [m]");
+
+subplot(5,2,8)
+hold on; grid on; grid minor;
+plot(TWA_vec, x_crew_res); 
+ylabel("x_crew [m]");
 xlabel("TWA [deg]")
 
+%%
 %--------------------------------------------------------------------------
 % Plot Force and Moment Balances (Component Breakdown)
 %--------------------------------------------------------------------------

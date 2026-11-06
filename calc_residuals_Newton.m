@@ -3,10 +3,19 @@ function [residuals,FM] = calc_residuals_Newton(state, env, moth, TWS, TWA)
 % Unpack the 5-DOF state vector requested by the solver
 VS     = state(1); % Surge (Forward boat speed)
 heave  = state(2); % Vertical displacement
-heel   = state(3); % Roll angle
-pitch  = state(4); % Trim angle
+y_crew = state(3); % sailor lateral hiking position [m]
+x_crew  = state(4); % Sailor longitudinal position [m]
 leeway = state(5); % Drift angle
 alpha_sail = state(6);   % [rad] sail angle of attack
+
+% clamped heel and pitch
+heel = moth.heel_target;
+pitch = moth.pitch_target;
+
+% Dynamically update the boat's Center of Gravity based on sailor position
+moth.x_cg = (moth.m_boat*moth.x_boat_cg + moth.m_sailor*x_crew) / moth.m_tot;
+moth.y_cg = (moth.m_boat*moth.y_boat_cg + moth.m_sailor*y_crew) / moth.m_tot;
+moth.r_cg = [moth.x_cg; moth.y_cg; moth.z_cg];
 
 H_hull = moth.mv_span - heave; % Negative when hull is immersed
 
@@ -70,7 +79,11 @@ M_sail = cross(r_sail, FA);
 % Convert scalar table outputs into 5-DOF forces and moments
 hull_surge     = -R_hull;                                % [N] Resistance acts backwards (-x)
 hull_heave     = -env.water.rho * env.g * V_disp;        % [N] Buoyancy acts upwards (-z)
-hull_roll_mom  = 0;                                      % [Nm] Symmetrical hull has zero roll moment
+% Buoyancy acts at the hull centreline; its offset from the combined CG gives a roll moment
+r_cb = R_boat2earth * ([xB; 0; moth.z_hull_bottom - 0.05] - moth.r_cg);
+M_cb = cross(r_cb, [0; 0; hull_heave]);
+hull_roll_mom = M_cb(1);
+
 hull_pitch_mom = (xB - moth.x_cg) * (-hull_heave);       % [Nm] Pitch moment (moment arm x buoyancy force)
 
 % Wand Mechanism
@@ -102,21 +115,17 @@ F_sway  = leeway - out_main.leeway;
 %--------------------------------------------------------------------------
 % Sail trim residual
 %--------------------------------------------------------------------------
-if H_hull < 0
-    % DISPLACEMENT MODE (Hull immersed):
-    % Sailor sits centered and keeps the sail sheeted to max AoA for maximum drive.
-    R_trim = alpha_sail - moth.alpha_sail_max;
+%--------------------------------------------------------------------------
+% Sail Trim & Hiking Complementarity
+%--------------------------------------------------------------------------
+% a >= 0: Margin to maximum sail power
+a = moth.alpha_sail_max - alpha_sail;
 
-else
-    % FOILING MODE (Hull flying clear):
-    % Fischer-Burmeister complementarity between max AoA and windward heel limit.
-    % a >= 0: margin to max AoA
-    % b >= 0: margin to target windward heel (heel is negative to windward)
-    a = moth.alpha_sail_max - alpha_sail;
-    b = moth.heel_target - heel;             
+% b >= 0: Margin to max windward hiking (y_crew goes negative to windward)
+b = y_crew - moth.y_crew_foiling; 
 
-    R_trim = sqrt(a^2 + b^2 + 1e-10) - a - b;
-end
+% Fischer-Burmeister: Hike fully to windward before depowering the sail
+R_trim = sqrt(a^2 + b^2 + 1e-10) - a - b;
 
 if isfield(moth,'alpha_pin')
     R_trim = alpha_sail - moth.alpha_pin; 
