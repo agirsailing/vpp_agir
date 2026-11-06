@@ -1,18 +1,16 @@
 function [residuals,FM] = calc_residuals_Newton(state, env, moth, TWS, TWA)
 
 % Unpack the 5-DOF state vector requested by the solver
-VS     = state(1); % Surge (Forward boat speed)
-heave  = state(2); % Vertical displacement
-y_crew = state(3); % sailor lateral hiking position [m]
-x_crew  = state(4); % Sailor longitudinal position [m]
-leeway = state(5); % Drift angle
-alpha_sail = state(6);   % [rad] sail angle of attack
+VS         = state(1); % Surge (Forward boat speed)
+heave      = state(2); % Vertical displacement
+heel       = state(3); % heel [rad]
+pitch      = state(4); % pitch [rad]
+leeway     = state(5); % drift angle [rad]
+s          = state(6); % control 0:2
+x_crew     = state(7);   % x-position of crew from origin [m]
 
-% clamped heel and pitch
-heel = moth.heel_target;
-pitch = moth.pitch_target;
+[y_crew, alpha_sail] = get_controls(s, moth);
 
-% Dynamically update the boat's Center of Gravity based on sailor position
 moth.x_cg = (moth.m_boat*moth.x_boat_cg + moth.m_sailor*x_crew) / moth.m_tot;
 moth.y_cg = (moth.m_boat*moth.y_boat_cg + moth.m_sailor*y_crew) / moth.m_tot;
 moth.r_cg = [moth.x_cg; moth.y_cg; moth.z_cg];
@@ -76,8 +74,19 @@ M_sail = cross(r_sail, FA);
 % Hull calculation using the pre-calculated table
 [R_hull, V_disp, xB] = calc_hull(VS, H_hull, moth);
 
+% --- NEW: HULL SIDE FORCE & INDUCED DRAG ---
+% 1. Get the actual submerged draft (T_hull is positive when hull is immersed, 0 when flying)
+T_hull = max(0, -H_hull);
+
+% 2. Calculate hull side force using Slender Body Theory (Jones, 1946)
+FY_hull = 0.5 * env.water.rho * VS^2 * pi * T_hull^2 * leeway;
+
+% 3. Calculate the induced drag caused by this side force
+hull_induced_drag = FY_hull * tan(leeway);
+
 % Convert scalar table outputs into 5-DOF forces and moments
-hull_surge     = -R_hull;                                % [N] Resistance acts backwards (-x)
+% Add the induced drag penalty to the baseline surge resistance
+hull_surge     = -R_hull - hull_induced_drag;            % [N] Resistance acts backwards (-x)
 hull_heave     = -env.water.rho * env.g * V_disp;        % [N] Buoyancy acts upwards (-z)
 % Buoyancy acts at the hull centreline; its offset from the combined CG gives a roll moment
 r_cb = R_boat2earth * ([xB; 0; moth.z_hull_bottom - 0.05] - moth.r_cg);
@@ -93,10 +102,9 @@ dynamic_flap = moth.main_flap_ang + moth.wand_gain * (heave - moth.depth_foil_fl
 dynamic_flap = min(max(dynamic_flap, moth.f1_flap_min), moth.f1_flap_max); % Clamp limits
 
 % Main Foil calculation (Lateral Equilibrium enforcement)
-% The vertical foil must produce side force to counter sail and rudder side force
-FY_target = -(FAY + FH_rudder(2)); 
+% The vertical foil must produce side force to counter sail, rudder, and hull side force
+FY_target = -(FAY + FH_rudder(2) + FY_hull); 
 [F_main, M_main, out_main] = calc_main_foil(VS, heave, heel, pitch, dynamic_flap, FY_target, moth, env);
-
 
 %--------------------------------------------------------------------------
 % Equilibrium equations
@@ -112,28 +120,17 @@ M_pitch = M_sail(2) + hull_pitch_mom + M_main(2) + M_rudder(2);
 % Kinematic leeway match 
 F_sway  = leeway - out_main.leeway;
 
-%--------------------------------------------------------------------------
-% Sail trim residual
-%--------------------------------------------------------------------------
-%--------------------------------------------------------------------------
-% Sail Trim & Hiking Complementarity
-%--------------------------------------------------------------------------
-% a >= 0: Margin to maximum sail power
-a = moth.alpha_sail_max - alpha_sail;
 
-% b >= 0: Margin to max windward hiking (y_crew goes negative to windward)
-b = y_crew - moth.y_crew_foiling; 
+% Heel control (s): more s -> more windward -> heel decreases, so g_s rises with s
+g_s = (moth.heel_target - heel) / deg2rad(5);
+R_s = max(s - 2, min(s - 0, g_s));
 
-% Fischer-Burmeister: Hike fully to windward before depowering the sail
-R_trim = sqrt(a^2 + b^2 + 1e-10) - a - b;
+% Pitch control (x_crew): moving forward lowers the bow, so g_x rises with x_crew
+x_lo = moth.wing_x_pos;  x_hi = moth.wing_x_pos + moth.wing_length;
+g_x = (moth.pitch_target - pitch) / deg2rad(2);
+R_x = max(x_crew - x_hi, min(x_crew - x_lo, g_x));
 
-if isfield(moth,'alpha_pin')
-    R_trim = alpha_sail - moth.alpha_pin; 
-end
-
-% Output array for the Newton solver
-residuals = [F_surge; F_heave; M_heel; M_pitch; F_sway; R_trim];
-
+residuals = [F_surge; F_heave; M_heel; M_pitch; F_sway; R_s; R_x];
 
 
 % if nargout > 1
@@ -179,6 +176,8 @@ FM.pitch_sail = M_sail(2);
 FM.pitch_hull = hull_pitch_mom;
 FM.pitch_main_f = M_main(2);
 FM.pitch_rudder_f = M_rudder(2);
+FM.alpha_sail = alpha_sail;
+FM.y_crew = y_crew;
 
 
 
