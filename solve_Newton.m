@@ -41,7 +41,7 @@ while FLAG == 0
         Xn(2) = min(Xn(2), moth.mv_span + 0.155);
         Xn(3) = min(max(Xn(3), deg2rad(-40)), deg2rad(40));
         Xn(4) = min(max(Xn(4), deg2rad(-15)), deg2rad(15));
-        Xn(6) = min(max(Xn(6), 0), 2);
+        Xn(6) = min(max(Xn(6), -1), 2);
         Xn(7) = min(max(Xn(7), moth.wing_x_pos), moth.wing_x_pos + moth.wing_length);
         [Rn,~] = calc_residuals_Newton(Xn, env, moth, TWS, TWA);
         if all(isfinite(Rn)) && norm(Rn ./ tolR) < f0
