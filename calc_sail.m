@@ -1,4 +1,4 @@
-   function [FA, CEA, alfa_vec, trim] = calc_sail(moth, env, alpha_sail, VS, tws, twa, phi, theta)
+   function [FA, CEA, alfa_vec, trim, C] = calc_sail(moth, env, alpha_sail, VS, tws, twa, phi, theta)
 % CALC_SAIL  Aerodynamic sail force in the boat reference frame.
 %
 %   [FA, CEA, alfa_vec] = calc_sail(moth, env, tw, VS, tws, twa, phi, theta)
@@ -102,5 +102,7 @@ FA = R_pitch * R_heel * [F_D; F_SF; 0];
 
 %% 5) Centre of effort
 CEA = -moth.z_CE_sail;                 % [m] height above deck (z is +down in moth frame)
+
+C = [CL;CD;awa];
 
 end
