@@ -55,6 +55,9 @@ function moth = get_boat_params()
 
     moth.f1_S        = foil_area(moth.f1_planform, moth.f1_span, ...
                                  moth.f1_c_root, moth.f1_c_tip);  % [m^2]
+    moth.CLs_max = 0.9;   % [-] strut lift coefficient the sailor accepts before easing the sail, TUNE
+
+
     %% Foil Lift and Drag data
     moth.r_foildata = readtable("DATA_NACA2008.csv");
 
@@ -92,11 +95,10 @@ function moth = get_boat_params()
     moth.z_CE_sail   = -2.317;      % [m] sail CE, negative = above hull
     moth.CLmax_sail  = 1.5;         % [-] 
     moth.k_sail      = 1.05;        % [-] sail form factor (1+k)
-    moth.alpha_sail_max = deg2rad(20);  % [rad] max sail AoA (stall onset / trim limit), TUNE
+    moth.alpha_sail_max = deg2rad(23);  % [rad] max sail AoA (stall onset / trim limit), TUNE
     moth.alpha_sail_min = deg2rad(0.5); % [rad] fully depowered
     moth.heel_target    = deg2rad(-7);   % [rad] heel the sailor accepts, TUNE
-
-
+    
 
     %% Wings
     moth.numberOfWingbars = 2;       % [-]  
@@ -112,7 +114,7 @@ function moth = get_boat_params()
 
     %%  Derived 
     % Crew lateral position: sitting on the port (windward) wing edge
-    moth.y_crew_foiling = -moth.y_wing_edge + 0.5;  % [m] Hiked out to windward on wing
+    moth.y_crew_foiling = -moth.y_wing_edge - 0.5;  % [m] Hiked out to windward on wing
     moth.y_crew_disp    = 0.0;                      % [m] Centered on hull centerline in light winds
     moth.y_crew         = moth.y_crew_foiling;      % Default fallback
 
